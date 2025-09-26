@@ -1,0 +1,538 @@
+/* src/components/admin/styles/admin.module.css */
+/* Admin Dashboard Styles - CSS Module version */
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+/* 🔒 Scoped variables so they don’t leak to public site */
+:global(.admin-scope) {
+  --admin-primary: #4e54c8;
+  --admin-primary-light: #8f94fb;
+  --admin-secondary: #34AF6D;
+  --admin-dark: #333;
+  --admin-light: #f9f9f9;
+  --admin-gray: #e0e0e0;
+  --admin-danger: #ff4d4d;
+  --admin-warning: #ffcc00;
+  --admin-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  /* optional orange overrides */
+  --cb-orange: #ff6f61;
+  --cb-orange-dark: #e55a4f;
+}
+
+/* ================== Admin Container ================== */
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+  font-family: "Poppins", sans-serif;
+  background: var(--admin-light);
+  color: var(--admin-dark);
+}
+
+/* ================== Sidebar ================== */
+.admin-nav {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  height: 100vh;
+  left: 0;
+  width: 80px;
+  background: #fff;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: var(--admin-shadow);
+  z-index: 100;
+}
+
+.admin-nav:hover {
+  width: 250px;
+}
+
+.admin-logo {
+  text-align: center;
+  display: flex;
+  margin: 20px 0 0 20px;
+  padding-bottom: 2rem;
+}
+
+.admin-logo img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.admin-logo span {
+  font-weight: bold;
+  padding-left: 15px;
+  font-size: 18px;
+  text-transform: uppercase;
+  color: var(--admin-primary);
+}
+
+.admin-nav a {
+  position: relative;
+  width: 100%;
+  font-size: 14px;
+  color: var(--admin-dark);
+  display: table;
+  padding: 15px 20px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.admin-nav .fas {
+  position: relative;
+  width: 70px;
+  height: 40px;
+  top: 10px;
+  font-size: 20px;
+  text-align: center;
+  color: var(--admin-primary);
+}
+
+.admin-nav-item {
+  position: relative;
+  top: 10px;
+  margin-left: 10px;
+}
+
+/* ✅ active class handled with :global */
+.admin-nav a:global(.active) {
+  background: var(--admin-primary);
+  color: white;
+}
+.admin-nav a:global(.active) i {
+  color: white;
+}
+
+.admin-nav a:hover {
+  background: var(--admin-gray);
+  color: var(--admin-primary);
+}
+.admin-nav a:hover i {
+  color: var(--admin-primary);
+}
+
+/* Sidebar reset + logout */
+.admin-nav ul,
+.admin-nav li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.admin-nav .admin-logout {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+}
+
+/* ================== Main Section ================== */
+.admin-main {
+  position: relative;
+  padding: 20px;
+  width: calc(100% - 80px);
+  left: 80px;
+  transition: all 0.3s ease;
+}
+
+/* ✅ expanded state */
+.admin-main-expanded {
+  width: calc(100% - 250px);
+  left: 250px;
+}
+
+.admin-main-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.admin-main-top h1 {
+  color: var(--admin-primary);
+  font-size: 24px;
+}
+
+/* ================== User Info ================== */
+.admin-user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.admin-user-info img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.admin-notification {
+  position: relative;
+}
+.admin-notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--admin-danger);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-main-top i {
+  color: var(--admin-primary);
+  cursor: pointer;
+  font-size: 20px;
+}
+
+/* ================== Stats ================== */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+.admin-stat-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: var(--admin-shadow);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.admin-stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+}
+.admin-icon-present {
+  background: var(--admin-secondary);
+}
+.admin-icon-late {
+  background: var(--admin-warning);
+}
+.admin-icon-absent {
+  background: var(--admin-danger);
+}
+.admin-icon-total {
+  background: var(--admin-primary);
+}
+
+/* ================== Users (cards) ================== */
+.admin-users {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+.admin-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: var(--admin-shadow);
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+.admin-card:hover {
+  transform: translateY(-5px);
+}
+.admin-card img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 15px;
+  border: 3px solid var(--admin-primary-light);
+}
+.admin-card h4 {
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  color: var(--admin-dark);
+}
+.admin-card p {
+  font-size: 12px;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  color: #777;
+}
+.admin-card button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  background: var(--admin-primary);
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+}
+.admin-card button:hover {
+  background: var(--admin-primary-light);
+}
+
+/* ================== Attendance ================== */
+.admin-attendance {
+  margin-top: 20px;
+  text-transform: capitalize;
+}
+.admin-attendance-list {
+  width: 100%;
+  padding: 20px;
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--admin-shadow);
+  overflow-x: auto;
+}
+.admin-attendance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.admin-attendance-header h1 {
+  color: var(--admin-primary);
+  font-size: 20px;
+}
+.admin-search-box {
+  display: flex;
+  align-items: center;
+  background: var(--admin-light);
+  border-radius: 5px;
+  padding: 5px 15px;
+}
+.admin-search-box input {
+  background: transparent;
+  padding: 8px;
+  width: 200px;
+  border: none;
+  outline: none;
+}
+.admin-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 800px;
+  font-size: 14px;
+}
+.admin-table thead tr {
+  color: #fff;
+  background: var(--admin-primary);
+  text-align: left;
+  font-weight: bold;
+}
+.admin-table th,
+.admin-table td {
+  padding: 12px 15px;
+}
+.admin-table tbody tr {
+  border-bottom: 1px solid #ddd;
+}
+.admin-table tbody tr:nth-of-type(even) {
+  background: #f9f9f9;
+}
+.admin-table tbody tr:last-of-type {
+  border-bottom: 2px solid var(--admin-primary);
+}
+.admin-status {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.admin-present {
+  background: rgba(52, 175, 109, 0.2);
+  color: var(--admin-secondary);
+}
+.admin-late {
+  background: rgba(255, 204, 0, 0.2);
+  color: var(--admin-warning);
+}
+.admin-absent {
+  background: rgba(255, 77, 77, 0.2);
+  color: var(--admin-danger);
+}
+.admin-table button {
+  padding: 6px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--admin-primary);
+  color: var(--admin-primary);
+  transition: all 0.3s ease;
+}
+.admin-table button:hover {
+  background: var(--admin-primary);
+  color: #fff;
+}
+
+/* ================== Forms ================== */
+.admin-user-form,
+.admin-mark-attendance-form {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: var(--admin-shadow);
+}
+.admin-form-group {
+  margin-bottom: 15px;
+}
+.admin-form-group input,
+.admin-form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+}
+.admin-btn {
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+}
+.admin-btn-primary {
+  background: var(--admin-primary);
+  color: white;
+}
+.admin-btn-primary:hover {
+  background: var(--admin-primary-light);
+}
+.admin-btn-danger {
+  background: var(--admin-danger);
+  color: white;
+}
+.admin-btn-danger:hover {
+  background: #ff6b6b;
+}
+.admin-mark-attendance-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  align-items: end;
+}
+.admin-mark-attendance-form h3 {
+  grid-column: 1 / -1;
+  margin-bottom: 10px;
+  color: var(--admin-primary);
+}
+
+/* ================== Toggle (mobile) ================== */
+.admin-toggle-btn {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1000;
+  background: var(--admin-primary);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--admin-shadow);
+}
+
+/* ✅ active toggle states */
+.admin-nav:global(.active) {
+  left: 0;
+}
+.admin-nav:hover:global(.active) {
+  width: 200px;
+}
+
+/* ================== Responsive ================== */
+@media (max-width: 1024px) {
+  .admin-users {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .admin-toggle-btn {
+    display: flex;
+  }
+  .admin-nav {
+    left: -80px;
+    width: 80px;
+  }
+  .admin-main {
+    width: 100%;
+    left: 0;
+  }
+  .admin-main:global(.active) {
+    width: calc(100% - 80px);
+    left: 80px;
+  }
+  .admin-users {
+    grid-template-columns: 1fr;
+  }
+  .admin-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 576px) {
+  .admin-main-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .admin-user-info {
+    align-self: flex-end;
+  }
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+  .admin-search-box input {
+    width: 150px;
+  }
+}
+
+/* ================== Scoped overrides ================== */
+:global(.admin-scope) .main h1,
+:global(.admin-scope) .admin-main-top h1 {
+  color: var(--cb-orange) !important;
+}
+:global(.admin-scope) .btn,
+:global(.admin-scope) .admin-btn,
+:global(.admin-scope) .admin-table button,
+:global(.admin-scope) .admin-card button,
+:global(.admin-scope) button.btn,
+:global(.admin-scope) a.btn,
+:global(.admin-scope) .btn-add,
+:global(.admin-scope) .btn-edit,
+:global(.admin-scope) .btn-delete {
+  background: var(--cb-orange) !important;
+  border-color: var(--cb-orange) !important;
+  color: #fff !important;
+}
+:global(.admin-scope) .btn:hover,
+:global(.admin-scope) .admin-btn:hover,
+:global(.admin-scope) .admin-table button:hover,
+:global(.admin-scope) .admin-card button:hover {
+  background: var(--cb-orange-dark) !important;
+  border-color: var(--cb-orange-dark) !important;
+  color: #fff !important;
+}
+:global(.admin-scope) .btn i,
+:global(.admin-scope) .btn svg,
+:global(.admin-scope) .admin-table button i,
+:global(.admin-scope) .admin-table button svg {
+  color: #fff !important;
+  fill: #fff !important;
+}
