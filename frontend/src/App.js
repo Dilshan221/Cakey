@@ -30,6 +30,7 @@ import RegisterUser from "./pages/registerhome";
 import Order from "./pages/OrderPage";
 import PaymentMethod from "./pages/PaymentMethod";
 import OrderView from "./pages/OrderView";
+import ComplaintPage from "./pages/contact";
 
 /* ---------- Auth ---------- */
 import Signup from "./components/user/signup";
@@ -56,6 +57,11 @@ import ProductForm from "./components/product/productform";
 import PaymentNew from "./components/admin/PaymentNew";
 import SalaryEditor from "./components/admin/SalaryEditor";
 import EmployeePayRecord from "./components/admin/EmployeePayRecord";
+
+/* ---------- Reviews / Complaints Admin pages ---------- */
+import CadminDashboard from "./components/complain/Admindashboard";
+import ReviewManagement from "./components/complain/ReviewManagement";
+import ComplaintManagement from "./components/complain/ComplaintManagement";
 
 /* ---------- Admin CSS Module (scoped) ---------- */
 import adminStyles from "./components/admin/styles/admin.module.css";
@@ -133,9 +139,14 @@ export default function App() {
     <Router>
       <ScrollToTop />
       <Routes>
+        {/* Admin routes */}
+        <Route path="/cadmin" element={<CadminDashboard />} />
+        <Route path="/reviews" element={<ReviewManagement />} />
+        <Route path="/complaintadmin" element={<ComplaintManagement />} />
+
         {/* PRODUCT (protected) */}
         <Route element={<RequireAuth />}>
-          <Route path="/admin/product/*" element={<ProductShell />}>
+          <Route path="/cadmin/product/*" element={<ProductShell />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<ProductDashboard />} />
             <Route path="form" element={<ProductForm />} />
@@ -154,7 +165,7 @@ export default function App() {
           </Route>
         </Route>
 
-        {/* ORIGINAL ADMIN (protected) */}
+        {/* ORIGINAL ADMIN (now under /cadmin) */}
         <Route element={<RequireAuth />}>
           <Route path="/admin/*" element={<AdminShell />}>
             <Route index element={<AdminDashboard />} />
@@ -169,6 +180,7 @@ export default function App() {
               <Route path="new" element={<SalaryEditor />} />
               <Route path="records" element={<EmployeePayRecord />} />
             </Route>
+
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>
         </Route>
@@ -184,6 +196,10 @@ export default function App() {
             <Route path="gallery" element={<Gallery />} />
             <Route path="menu" element={<Menu />} />
             <Route path="services" element={<Services />} />
+
+            {/* ✅ Public complaints page */}
+            <Route path="complaints" element={<ComplaintPage />} />
+
             {/* Product details / checkout */}
             <Route path="order" element={<Order />} />
             <Route path="order/:id" element={<Order />} />

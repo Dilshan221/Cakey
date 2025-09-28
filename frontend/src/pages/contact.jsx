@@ -1,7 +1,9 @@
+// src/pages/contact.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ReviewsAPI } from "../services/api"; // ✅ import your API wrapper
 
-const Review = () => {
+const Contact = () => {
   const [rating, setRating] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -25,27 +27,21 @@ const Review = () => {
     data.rating = rating;
 
     try {
-      const response = await fetch("http://localhost:5000/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      // ✅ use ReviewsAPI instead of hard-coded fetch
+      await ReviewsAPI.create(data);
 
-      if (response.ok) {
-        setMessage("Review submitted successfully!");
-        setIsSuccess(true);
-        e.target.reset();
-        setRating(0);
-      } else {
-        setMessage("Failed to submit review");
-        setIsSuccess(false);
-      }
-    } catch {
-      setMessage("Network error. Please try again.");
+      setMessage("Review submitted successfully!");
+      setIsSuccess(true);
+      e.target.reset();
+      setRating(0);
+    } catch (err) {
+      setMessage(
+        err?.data?.message || err?.message || "Network error. Please try again."
+      );
       setIsSuccess(false);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -83,7 +79,7 @@ const Review = () => {
                   <i className="fa fa-envelope small-icon"></i>
                   <h5>Email</h5>
                   <p>
-                    <a href="mailto:email@yoursite.com">cakey23@gmail.com</a>
+                    <a href="mailto:cakey23@gmail.com">cakey23@gmail.com</a>
                   </p>
                 </div>
               </div>
@@ -102,7 +98,7 @@ const Review = () => {
                 <div className="box-hover icon p-2">
                   <i className="fa fa-map-marker small-icon"></i>
                   <h5>Location</h5>
-                  <p> 123, Malabe</p>
+                  <p>123, Malabe</p>
                 </div>
               </div>
 
@@ -221,7 +217,7 @@ const Review = () => {
                     <button
                       type="submit"
                       className="btn btn-primary"
-                      disabled={loading}
+                      disabled={loading || rating === 0}
                     >
                       {loading ? "Submitting..." : "Submit Review"}
                     </button>
@@ -243,7 +239,6 @@ const Review = () => {
                     referrerPolicy="no-referrer-when-downgrade"
                   ></iframe>
                 </div>
-                {/* Complaint Button - moved here and made more prominent */}
                 <div className="mt-3 text-center">
                   <button
                     type="button"
@@ -262,4 +257,4 @@ const Review = () => {
   );
 };
 
-export default Review;
+export default Contact;
