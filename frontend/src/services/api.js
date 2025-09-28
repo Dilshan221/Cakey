@@ -397,6 +397,45 @@ export const apiService = {
   },
 };
 
+/* ------------------------------ Reviews API ------------------------------ */
+export const ReviewsAPI = {
+  list: (query = {}) => apiService.request(`/reviews${qs(query)}`),
+  get: (id) => apiService.request(`/reviews/${id}`),
+  create: (payload) =>
+    apiService.request(`/reviews`, { method: "POST", body: payload }),
+  update: (id, payload) =>
+    apiService.request(`/reviews/${id}`, { method: "PATCH", body: payload }),
+  updateStatus: (id, status) =>
+    apiService.request(`/reviews/${id}/status`, {
+      method: "PATCH",
+      body: { status },
+    }),
+  remove: (id) => apiService.request(`/reviews/${id}`, { method: "DELETE" }),
+};
+
+
+/* ----------------------------- Complaints API ---------------------------- */
+export const ComplaintsAPI = {
+  list: (query = {}) => apiService.request(`/complaints${qs(query)}`),
+  get: (id) => apiService.request(`/complaints/${id}`),
+  create: (payload) =>
+    apiService.request(`/complaints`, { method: "POST", body: payload }),
+  // Use PUT for full updates or PATCH for partial status changes
+  update: (id, payload) =>
+    apiService.request(`/complaints/${id}`, { method: "PUT", body: payload }),
+  updateStatus: (id, status) =>
+    apiService.request(`/complaints/${id}`, {
+      method: "PATCH",
+      body: { status },
+    }),
+  addReply: (id, message, by) =>
+    apiService.request(`/complaints/${id}/replies`, {
+      method: "POST",
+      body: { message, by },
+    }),
+  remove: (id) => apiService.request(`/complaints/${id}`, { method: "DELETE" }),
+};
+
 /* ---------------- Convenience re-exports for user admin ---------------- */
 export const userMgmtAPI = {
   login: (email, password) => apiService.login({ email, password }),
