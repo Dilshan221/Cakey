@@ -3,6 +3,8 @@ import {
   createOrder,
   getOrderById,
   getOrderByOrderId,
+  trackOrderByOrderId,
+  getOrdersByCustomer,
   validateOrderData,
   calculateOrderPrice,
   getAvailableDeliveryDates,
@@ -12,11 +14,15 @@ import {
 const router = express.Router();
 
 router.post("/create", createOrder);
-router.get("/:id", getOrderById);
-router.get("/track/:orderId", getOrderByOrderId);
+router.get("/orderId/:orderId", getOrderByOrderId);
+router.get("/track/:orderId", trackOrderByOrderId);
+router.get("/customer/:customerId", getOrdersByCustomer);
 router.post("/validate", validateOrderData);
 router.post("/calculate-price", calculateOrderPrice);
 router.get("/available-dates", getAvailableDeliveryDates);
 router.get("/cake-options", getCakeOptions);
+
+// keep this LAST
+router.get("/:id", getOrderById);
 
 export default router;

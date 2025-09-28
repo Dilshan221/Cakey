@@ -1,15 +1,52 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { apiService } from "../services/api";
+import { authStorage } from "../utils/authStorage";
 
 const Home = () => {
+  const navigate = useNavigate();
+  const [auth, setAuth] = useState({
+    token: null,
+    user: null,
+    isAuthed: false,
+  });
+
+  // ---- Read token/user and attach to apiService on mount ----
   useEffect(() => {
-    // Initialize scripts when component mounts
+    try {
+      const token = authStorage.read(authStorage.TOKEN_KEY);
+      const userJson = authStorage.read(authStorage.USER_KEY);
+      const user = userJson ? JSON.parse(userJson) : null;
+
+      if (token) {
+        // Attach token to apiService in a flexible way
+        if (typeof apiService.setAuthToken === "function") {
+          apiService.setAuthToken(token);
+        } else if (apiService?.defaults?.headers) {
+          // axios-like
+          apiService.defaults.headers.common =
+            apiService.defaults.headers.common || {};
+          apiService.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${token}`;
+        } else {
+          // fallback: expose globally if your apiService reads from here
+          window.__CB_AUTH_TOKEN__ = token;
+        }
+      }
+
+      setAuth({ token, user, isAuthed: !!token });
+    } catch {
+      setAuth({ token: null, user: null, isAuthed: false });
+    }
+  }, []);
+
+  // ---- jQuery plugins init (LayerSlider, Owl Carousel) ----
+  useEffect(() => {
     if (window.$) {
-      // Initialize LayerSlider
       if (window.$("#slider").layerSlider) {
         window.$("#slider").layerSlider();
       }
-
-      // Initialize carousels
       if (window.$("#owl-services").length) {
         window.$("#owl-services").owlCarousel({
           loop: true,
@@ -22,7 +59,6 @@ const Home = () => {
           },
         });
       }
-
       if (window.$("#owl-posts").length) {
         window.$("#owl-posts").owlCarousel({
           loop: true,
@@ -37,6 +73,18 @@ const Home = () => {
       }
     }
   }, []);
+
+  // ---- Logout clears both storages and returns home ----
+  const handleLogout = () => {
+    authStorage.removeAll();
+    // Optionally also strip axios header if you set it
+    if (apiService?.defaults?.headers?.common?.Authorization) {
+      delete apiService.defaults.headers.common.Authorization;
+    }
+    navigate("/", { replace: true });
+    // hard refresh if you prefer:
+    // window.location.href = "/";
+  };
 
   return (
     <>
@@ -64,13 +112,42 @@ const Home = () => {
                   Cake & Bake
                 </h1>
                 <p className="header-p">
-                  We offer high quality, delicious,"from scratch" cakes! See our
-                  menu for more information
+                  We offer high quality, delicious, "from scratch" cakes! See
+                  our menu for more information
                 </p>
-                <div className="hidden-small">
-                  <a className="btn btn-primary" href="/menu">
+
+                {/* CTA row shows different actions based on auth */}
+                <div
+                  className="hidden-small"
+                  style={{ display: "flex", gap: 12 }}
+                >
+                  <Link className="btn btn-primary" to="/menu">
                     Our Menu
-                  </a>
+                  </Link>
+
+                  {!auth.isAuthed ? (
+                    <>
+                      <Link className="btn btn-default" to="/login">
+                        Log In
+                      </Link>
+                      <Link className="btn btn-secondary" to="/signup">
+                        Sign Up
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link className="btn btn-default" to="/order">
+                        My Orders
+                      </Link>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={handleLogout}
+                      >
+                        Logout{auth?.user?.name ? ` (${auth.user.name})` : ""}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -96,10 +173,26 @@ const Home = () => {
                   We offer catering services for any kind of event! Contact us
                   to make an order
                 </p>
-                <div className="hidden-small">
-                  <a className="btn btn-primary" href="/contact">
+                <div
+                  className="hidden-small"
+                  style={{ display: "flex", gap: 12 }}
+                >
+                  <Link className="btn btn-primary" to="/contact">
                     Contact us
-                  </a>
+                  </Link>
+                  {auth.isAuthed ? (
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </button>
+                  ) : (
+                    <Link className="btn btn-default" to="/login">
+                      Log In
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -110,7 +203,7 @@ const Home = () => {
             className="ls-slide"
             data-ls="duration:6000; transition2d:7; kenburnszoom:out; kenburnsscale:1.2;"
           >
-            <img src="assets\img\slider\slide3.webp" className="ls-bg" alt="" />
+            <img src="assets/img/slider/slide3.webp" className="ls-bg" alt="" />
             <div
               className="ls-l header-wrapper"
               data-ls="offsetyin:150; durationin:700; delayin:200; easingin:easeOutQuint; rotatexin:20; scalexin:1.4; offsetyout:600; durationout:400;"
@@ -121,13 +214,25 @@ const Home = () => {
                   Cake & Bake
                 </h1>
                 <p className="header-p">
-                  We offer high quality, delicious,"from scratch" cakes! See our
-                  menu for more information
+                  We offer high quality, delicious, "from scratch" cakes! See
+                  our menu for more information
                 </p>
-                <div className="hidden-small">
-                  <a className="btn btn-primary" href="/menu">
+                <div
+                  className="hidden-small"
+                  style={{ display: "flex", gap: 12 }}
+                >
+                  <Link className="btn btn-primary" to="/menu">
                     Our Menu
-                  </a>
+                  </Link>
+                  {auth.isAuthed ? (
+                    <Link className="btn btn-default" to="/order">
+                      My Orders
+                    </Link>
+                  ) : (
+                    <Link className="btn btn-default" to="/signup">
+                      Sign Up
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -149,10 +254,26 @@ const Home = () => {
                   We offer catering services for any kind of event! Contact us
                   to make an order
                 </p>
-                <div className="hidden-small">
-                  <a className="btn btn-primary" href="/contact">
+                <div
+                  className="hidden-small"
+                  style={{ display: "flex", gap: 12 }}
+                >
+                  <Link className="btn btn-primary" to="/contact">
                     Contact us
-                  </a>
+                  </Link>
+                  {auth.isAuthed ? (
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </button>
+                  ) : (
+                    <Link className="btn btn-default" to="/login">
+                      Log In
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -175,7 +296,7 @@ const Home = () => {
                 />
                 <p className="lead res-margin">
                   High Quality services since 2001, qui fabulas definitiones at,
-                  ei nibh offendit mel. Eius comprehensam ex est.Pri ei laudem
+                  ei nibh offendit mel. Eius comprehensam ex est. Pri ei laudem
                   invenire, has ex regione sapientem
                 </p>
                 <p>
@@ -183,8 +304,7 @@ const Home = () => {
                   vim legere eleifend an, malis delicatissimi vel te. Pro
                   fuisset splendide vulputate an, quo eu eripuit nominati. Sit
                   enim eius laoreet te, qui fabulas definitiones at, ei nibh
-                  offendit mel. Eius comprehensam ex est.Pri ei laudem invenire,
-                  has ex regione sapientem.
+                  offendit mel.
                 </p>
               </div>
 
@@ -336,23 +456,18 @@ const Home = () => {
                           Aliquam erat volutpat In id fermentum augue, ut
                           pellentesque leo. Maecenas at arcu risus. Donec
                           commodo sodales ex, scelerisque laoreet nibh hendrerit
-                          id. In aliquet magna nec lobortis maximus. Etiam
-                          rhoncus leo a dolor placerat, nec elementum ipsum
-                          convall.
+                          id.
                         </p>
                         <p>
                           <strong>
                             Etiam rhoncus leo a dolor placerat, nec elementum
-                            ipsum convall Maecenas at arcu risus scelerisque
-                            laoree.
+                            ipsum convall.
                           </strong>
                         </p>
                         <p>
                           Felis tiam non metus Placerat a ultricies a, posuere
                           lorem ipseut lincas psuiem t volut pat phas ellus ac
-                          sodales Lorem ipsum dolor sit amet, consectetur
-                          adipisicing elit uasi quidem minus id omnis a nibh
-                          fusce mollis viverra elit
+                          sodales Lorem ipsum dolor sit amet.
                         </p>
                       </div>
 
@@ -369,15 +484,12 @@ const Home = () => {
                           Aliquam erat volutpat In id fermentum augue, ut
                           pellentesque leo. Maecenas at arcu risus. Donec
                           commodo sodales ex, scelerisque laoreet nibh hendrerit
-                          id. In aliquet magna nec lobortis maximus. Etiam
-                          rhoncus leo a dolor placerat, nec elementum ipsum
-                          convall.
+                          id.
                         </p>
                         <p>
                           <strong>
                             Etiam rhoncus leo a dolor placerat, nec elementum
-                            ipsum convall Maecenas at arcu risus scelerisque
-                            laoree.
+                            ipsum convall.
                           </strong>
                         </p>
                         <ul className="custom pl-0">
@@ -386,20 +498,17 @@ const Home = () => {
                           </li>
                           <li>
                             Curabitur blandit pretium interdum. Aliquam sit amet
-                            elementum odio, vel ultrices dui. Pellentesque ac
-                            odio vitae felis suscipit
+                            elementum odio, vel ultrices dui.
                           </li>
                           <li>
                             Omnicos directe al desirabilite de un nov lingua
-                            franca: On refusa continuar payar custosi
-                            traductores
+                            franca.
                           </li>
                           <li>
                             Ipuset phas ellus ac sodales Lorem ipsum dolor
                           </li>
                           <li>
-                            Curabitur blandit pretium interdum. Aliquam sit amet
-                            elementum odio, vel ultrices dui. Pellentesque ac
+                            Curabitur blandit pretium interdum. Pellentesque ac
                             odio vitae felis suscipit
                           </li>
                         </ul>
@@ -409,39 +518,24 @@ const Home = () => {
                         <h3 className="text-center-sm">Quality Ingredients</h3>
                         <p>
                           Aliquam erat volutpat In id fermentum augue, ut
-                          pellentesque leo. Maecenas at arcu risus. Donec
-                          commodo sodales ex, scelerisque laoreet nibh hendrerit
-                          id. In aliquet magna nec lobortis maximus. Etiam
-                          rhoncus leo a dolor placerat, nec elementum ipsum
-                          convall.
+                          pellentesque leo. Maecenas at arcu risus.
                         </p>
                         <p>
                           <strong>
                             Etiam rhoncus leo a dolor placerat, nec elementum
-                            ipsum convall Maecenas at arcu risus scelerisque
-                            laoree.
+                            ipsum convall.
                           </strong>
                         </p>
                         <p>
                           Felis tiam non metus Placerat a ultricies a, posuere
                           lorem ipseut lincas psuiem t volut pat phas ellus ac
-                          sodales Lorem ipsum dolor sit amet, consectetur
-                          adipisicing elit uasi quidem minus id omnis a nibh
-                          fusce mollis viverra elit
+                          sodales Lorem ipsum dolor sit amet.
                         </p>
                         <p>
                           Felis tiam non metus Placerat a ultricies a, posuere
                           lorem ipseut lincas psuiem t volut pat phas ellus ac
                           sodales Lorem ipsum dolor sit amet, consectetur
-                          adipisicing elit uasi quidem minus id omnis a nibh
-                          fusce mollis imperdie tlorem ipuset campas fincas
-                          interdum donec eget metus auguen unc vel mauris
-                          ultricies, vest ibulum orci eget usce mollis imperdiet
-                          interdum donec eget metus auguen unc vel lorem ispuet
-                          Ibu lum orci eget, viverra elit liquam erat volut pat
-                          phas ellus ac sodales Lorem ipsum dolor sit amet,
-                          consectetur adipisicing elit uasi quidem minus id
-                          omnis.
+                          adipisicing elit uasi quidem minus id omnis.
                         </p>
                       </div>
                     </div>
@@ -638,13 +732,12 @@ const Home = () => {
                   Etiam rhoncus leo a dolor placerat, nec elementum ipsum
                   convall Maecenas at arcu risus scelerisque laoree.
                 </p>
-                <a className="btn btn-secondary" href="/contact">
+                <Link className="btn btn-secondary" to="/contact">
                   Contact us
-                </a>
+                </Link>
               </div>
             </div>
           </section>
-          
         </div>
       </div>
     </>

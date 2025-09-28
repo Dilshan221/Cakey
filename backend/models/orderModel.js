@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const ProductSnapshotSchema = new mongoose.Schema(
   {
-    id: { type: mongoose.Schema.Types.ObjectId, ref: "Product" }, // optional
+    id: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
     name: { type: String, required: true, trim: true, maxlength: 200 },
-    imageUrl: { type: String, trim: true, maxlength: 1000 }, // <- image stored here
+    imageUrl: { type: String, trim: true },
     basePrice: { type: Number, required: true, min: 0 },
   },
   { _id: false }
@@ -14,11 +14,18 @@ const orderSchema = new mongoose.Schema(
   {
     orderId: { type: String, unique: true, sparse: true },
 
-    // snapshot of the product at time of purchase
     product: { type: ProductSnapshotSchema, required: true },
 
+    // Link order to registered user
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
     customer: {
-      name: { type: String, required: true, trim: true, maxlength: 100 },
+      // ✅ OPTIONAL NOW
+      name: { type: String, trim: true, maxlength: 100, default: "" },
       phone: {
         type: String,
         required: true,
@@ -38,14 +45,12 @@ const orderSchema = new mongoose.Schema(
       name: { type: String, required: true, default: "Chocolate Fudge Cake" },
       size: {
         type: String,
-        required: true,
         enum: ["small", "medium", "large"],
         default: "medium",
       },
-      quantity: { type: Number, required: true, min: 1, max: 50, default: 1 },
+      quantity: { type: Number, min: 1, max: 50, default: 1 },
       frosting: {
         type: String,
-        required: true,
         enum: ["butterCream", "creamCheese", "chocolateFrosting"],
         default: "butterCream",
       },
@@ -53,21 +58,9 @@ const orderSchema = new mongoose.Schema(
     },
 
     delivery: {
-      date: {
-        type: Date,
-        required: true,
-        validate: {
-          validator(v) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return v > today;
-          },
-          message: "Delivery date must be in the future",
-        },
-      },
+      date: { type: Date, required: true },
       time: {
         type: String,
-        required: true,
         enum: ["morning", "afternoon", "evening"],
         default: "afternoon",
       },
@@ -77,9 +70,8 @@ const orderSchema = new mongoose.Schema(
     payment: {
       method: {
         type: String,
-        required: true,
         enum: ["creditCard", "afterpay", "cashOnDelivery"],
-        default: "creditCard",
+        required: true,
       },
       subtotal: { type: Number, required: true, min: 0 },
       tax: { type: Number, required: true, min: 0 },
@@ -87,22 +79,16 @@ const orderSchema = new mongoose.Schema(
       total: { type: Number, required: true, min: 0 },
     },
 
-    // convenience duplicate of total
     price: { type: Number, required: true, min: 0 },
 
     status: {
       type: String,
-      required: true,
       enum: ["Preparing", "Out for Delivery", "Delivered", "Cancelled"],
       default: "Preparing",
     },
     orderDate: { type: Date, default: Date.now },
   },
-  {
-    timestamps: true,
-    // uncomment while debugging to catch unknown fields
-    // strict: "throw",
-  }
+  { timestamps: true }
 );
 
 orderSchema.pre("save", async function (next) {
@@ -110,17 +96,12 @@ orderSchema.pre("save", async function (next) {
     try {
       const count = await mongoose.model("Order").countDocuments();
       this.orderId = `ORD${String(count + 1).padStart(4, "0")}`;
-      console.log(`📋 Generated Order ID: ${this.orderId}`);
-    } catch (err) {
-      console.error("❌ Error generating order ID:", err);
+    } catch {
       this.orderId = `ORD${Date.now()}`;
     }
   }
   next();
 });
-
-orderSchema.index({ status: 1, orderDate: -1 });
-orderSchema.index({ "customer.phone": 1 });
 
 const Order = mongoose.model("Order", orderSchema);
 export default Order;

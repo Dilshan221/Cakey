@@ -1,6 +1,7 @@
 // src/services/api.js
 //
 // Resolves API base (supports Vite & CRA). Defaults to http://localhost:8000/api
+//
 const ENV =
   (typeof import.meta !== "undefined" && import.meta.env) || process.env;
 
@@ -60,13 +61,20 @@ const authStore = {
 };
 
 /* ------------------------------ Core client ------------------------------ */
+let AUTH_TOKEN = null; // allows authStorage.applyToApiService() to set header
+
 export const apiService = {
+  /** Set the token programmatically (used by authStorage.applyToApiService) */
+  setAuthToken(token) {
+    AUTH_TOKEN = token || null;
+  },
+
   /**
    * Fetch wrapper with JSON headers/Authorization, timeout, JSON parsing, etc.
    */
   async request(endpoint, options = {}) {
     const url = resolveUrl(API_BASE_URL, endpoint);
-    const token = authStore.getToken();
+    const token = AUTH_TOKEN ?? authStore.getToken();
 
     const controller =
       typeof AbortController !== "undefined" ? new AbortController() : null;
@@ -92,7 +100,6 @@ export const apiService = {
       ...options,
     };
 
-    // Ensure body is stringified if it's a plain object
     if (cfg.body && !usingFormData && typeof cfg.body === "object") {
       cfg.body = JSON.stringify(cfg.body);
     }
@@ -158,6 +165,7 @@ export const apiService = {
   },
   logout() {
     authStore.clear();
+    this.setAuthToken(null);
   },
   me() {
     return authStore.currentUser();
@@ -170,7 +178,6 @@ export const apiService = {
       body: userData,
     });
   },
-  // ⚠️ legacy single-user route (kept for backward compatibility)
   getUserById(id) {
     return this.request(`/usermanagement/${id}`);
   },
@@ -191,7 +198,6 @@ export const apiService = {
   getProduct(id) {
     return this.request(`/products/${id}`);
   },
-  // Alias used by pages: apiService.getProductById(id)
   getProductById(id) {
     return this.getProduct(id);
   },
@@ -204,7 +210,6 @@ export const apiService = {
   deleteProduct(id) {
     return this.request(`/products/${id}`, { method: "DELETE" });
   },
-  // NEW: categories for filters/forms
   listProductCategories() {
     return this.request("/products/categories");
   },
@@ -293,7 +298,6 @@ export const apiService = {
   getUsers(query = {}) {
     return this.request(`/user${qs(query)}`);
   },
-  // ✅ modern single-user route used by dashboards
   getUser(id) {
     return this.request(`/user/${id}`);
   },
@@ -315,7 +319,6 @@ export const apiService = {
     return this.listSalaryRecords({ employeeId, ...query });
   },
   createSalaryRecord(payload) {
-    // { employeeId, period:"YYYY-MM", baseSalary, paidAmount, method, currency, note, paymentId?, paymentReference?, status? }
     return this.request(`/salaries`, { method: "POST", body: payload });
   },
   updateSalaryRecord(id, payload) {
@@ -326,9 +329,7 @@ export const apiService = {
   },
 
   // ------------------------------- Orders ------------------------------- //
-  // High-level helper that maps UI payload (from OrderPage) to backend contract.
   createOrderFromOrderPage: (ui) => {
-    // Map UI -> backend enums (creditCard | afterpay | cashOnDelivery)
     let paymentMethod = "creditCard";
     if (ui.paymentMethod === "afterpay") paymentMethod = "afterpay";
     else if (
@@ -337,7 +338,6 @@ export const apiService = {
     )
       paymentMethod = "cashOnDelivery";
 
-    // Try to carry product snapshot price explicitly
     const basePrice =
       ui.basePrice ??
       ui.productPrice ??
@@ -347,58 +347,61 @@ export const apiService = {
       0;
 
     const body = {
+      customerId: ui.customerId,
       customerName: ui.customer?.name,
       customerPhone: ui.customer?.phone,
       deliveryAddress: ui.customer?.address,
-      deliveryDate: ui.delivery?.date, // "YYYY-MM-DD"
-      deliveryTime: ui.delivery?.timeSlot, // morning | afternoon | evening
+      deliveryDate: ui.delivery?.date,
+      deliveryTime: ui.delivery?.timeSlot,
       specialInstructions: ui.note || "",
-
       size: ui.size,
       quantity: ui.qty,
       frosting: ui.frosting || "butterCream",
-
-      paymentMethod, // creditCard | afterpay | cashOnDelivery
+      paymentMethod,
       subtotal: ui.subtotal,
       tax: ui.tax,
       total: ui.total,
-      deliveryFee: ui.deliveryFee, // backend defaults to 500; safe to send
-
-      // optional product info (snapshot)
+      deliveryFee: ui.deliveryFee,
       productId: ui.productId,
       productName: ui.productName,
       imageUrl: ui.imageUrl,
-      basePrice, // <-- important for backend snapshot
+      basePrice,
     };
 
-    return apiService.request("/order/create", { method: "POST", body });
+    return this.request("/order/create", { method: "POST", body });
   },
 
-  // If you want to post already-mapped data directly:
-  createOrder: (body) =>
-    apiService.request("/order/create", { method: "POST", body }),
-
-  getOrderById: (id) => apiService.request(`/order/${id}`),
-
-  trackOrderByOrderId: (orderId) =>
-    apiService.request(`/order/track/${orderId}`),
-
-  validateOrderData: (body) =>
-    apiService.request("/order/validate", { method: "POST", body }),
-
-  calculateOrderPrice: (body) =>
-    apiService.request("/order/calculate-price", { method: "POST", body }),
-
-  getAvailableDeliveryDates: () => apiService.request("/order/available-dates"),
-
-  getCakeOptions: () => apiService.request("/order/cake-options"),
+  createOrder(body) {
+    return this.request("/order/create", { method: "POST", body });
+  },
+  getOrderById(id) {
+    return this.request(`/order/${id}`);
+  },
+  trackOrderByOrderId(orderId) {
+    return this.request(`/order/track/${orderId}`);
+  },
+  getOrdersByCustomer(customerId) {
+    return this.request(`/order/customer/${customerId}`);
+  },
+  validateOrderData(body) {
+    return this.request("/order/validate", { method: "POST", body });
+  },
+  calculateOrderPrice(body) {
+    return this.request("/order/calculate-price", { method: "POST", body });
+  },
+  getAvailableDeliveryDates() {
+    return this.request("/order/available-dates");
+  },
+  getCakeOptions() {
+    return this.request("/order/cake-options");
+  },
 };
 
 /* ---------------- Convenience re-exports for user admin ---------------- */
 export const userMgmtAPI = {
   login: (email, password) => apiService.login({ email, password }),
   list: (q) => apiService.getUsers(q),
-  get: (id) => apiService.getUser(id), // ✅ modern /user/:id
+  get: (id) => apiService.getUser(id),
   create: (payload) => apiService.createUser(payload),
   update: (id, payload) => apiService.updateUser(id, payload),
   remove: (id) => apiService.deleteUser(id),

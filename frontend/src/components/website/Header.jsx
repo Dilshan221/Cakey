@@ -1,8 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 const Header = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Hide the preloader after the component mounts
+  useEffect(() => {
+    const preloader = document.getElementById("preloader");
+    if (preloader) {
+      preloader.style.display = "none";
+    }
+  }, []);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -10,7 +18,7 @@ const Header = () => {
 
   return (
     <>
-      {/* Preloader */}
+      {/* Preloader overlay – hidden via useEffect above */}
       <div id="preloader">
         <div className="spinner">
           <div className="bounce1"></div>
@@ -25,7 +33,7 @@ const Header = () => {
           <div className="sidebar-nav">
             <div className="navbar navbar-default" role="navigation">
               <div className="navbar-header">
-                {/* collapse button */}
+                {/* Collapse button */}
                 <button
                   type="button"
                   className="navbar-toggle"
@@ -104,16 +112,16 @@ const Header = () => {
           {/*/sidebar-nav */}
           <div className="navbar-info hidden-sm hidden-xs hidden-md">
             <p className="small-text">
-              <i className="fas fa-map-marker-alt margin-icon"></i>496/6
-              Anurapura Rd,Damulla
+              <i className="fas fa-map-marker-alt margin-icon"></i>
+              496/6 Anurapura Rd,Damulla
             </p>
             <p className="small-text">
-              <i className="fas fa-phone margin-icon"></i>(+94) 77- 123-4567
+              <i className="fas fa-phone margin-icon"></i>(+94) 77- 123-4567
             </p>
             <p className="small-text">
-              <i className="far fa-clock margin-icon"></i>Mon-Sat: 9am-5pm
+              <i className="far fa-clock margin-icon"></i>Mon–Sat: 9am–5pm
             </p>
-            {/*Social icons */}
+            {/* Social icons */}
             <div className="social-media">
               <a href="#" title="Email">
                 <i className="fas fa-envelope"></i>

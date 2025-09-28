@@ -9,6 +9,9 @@ import {
   useLocation,
 } from "react-router-dom";
 
+/* ---------- Auth utils ---------- */
+import { authStorage } from "./utils/authStorage";
+
 /* ---------- Public wrappers ---------- */
 import PublicLayout from "./components/Public/PublicLayout";
 import Layout from "./components/website/Layout";
@@ -25,7 +28,8 @@ import Menu from "./pages/menu";
 import Services from "./pages/service";
 import RegisterUser from "./pages/registerhome";
 import Order from "./pages/OrderPage";
-import PaymentMethod from "./pages/PaymentMethod"; // ⬅️ added
+import PaymentMethod from "./pages/PaymentMethod";
+import OrderView from "./pages/OrderView";
 
 /* ---------- Auth ---------- */
 import Signup from "./components/user/signup";
@@ -63,6 +67,16 @@ function ScrollToTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+/** Protect routes that require authentication */
+function RequireAuth() {
+  const location = useLocation();
+  const authed = authStorage.isAuthenticated();
+  if (!authed) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  return <Outlet />;
 }
 
 /* ------------------- Shells ------------------- */
@@ -119,38 +133,44 @@ export default function App() {
     <Router>
       <ScrollToTop />
       <Routes>
-        {/* PRODUCT */}
-        <Route path="/admin/product/*" element={<ProductShell />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ProductDashboard />} />
-          <Route path="form" element={<ProductForm />} />
-          <Route path="from" element={<Navigate to="form" replace />} />
+        {/* PRODUCT (protected) */}
+        <Route element={<RequireAuth />}>
+          <Route path="/admin/product/*" element={<ProductShell />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<ProductDashboard />} />
+            <Route path="form" element={<ProductForm />} />
+            <Route path="from" element={<Navigate to="form" replace />} />
+          </Route>
         </Route>
 
-        {/* USER ADMIN */}
-        <Route path="/useradmin/*" element={<UserAdminShell />}>
-          <Route index element={<UserAdminDashboard />} />
-          <Route path="addadmin" element={<AddAdmin />} />
-          <Route path="adminmanager" element={<AdminManager />} />
-          <Route path="editadmin/:id" element={<AddAdmin />} />
-          <Route path="*" element={<Navigate to="/useradmin" replace />} />
+        {/* USER ADMIN (protected) */}
+        <Route element={<RequireAuth />}>
+          <Route path="/useradmin/*" element={<UserAdminShell />}>
+            <Route index element={<UserAdminDashboard />} />
+            <Route path="addadmin" element={<AddAdmin />} />
+            <Route path="adminmanager" element={<AdminManager />} />
+            <Route path="editadmin/:id" element={<AddAdmin />} />
+            <Route path="*" element={<Navigate to="/useradmin" replace />} />
+          </Route>
         </Route>
 
-        {/* ORIGINAL ADMIN */}
-        <Route path="/admin/*" element={<AdminShell />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="attendance" element={<AttendanceList />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="payments">
-            <Route index element={<Navigate to="new" replace />} />
-            <Route path="new" element={<PaymentNew />} />
+        {/* ORIGINAL ADMIN (protected) */}
+        <Route element={<RequireAuth />}>
+          <Route path="/admin/*" element={<AdminShell />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="attendance" element={<AttendanceList />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="payments">
+              <Route index element={<Navigate to="new" replace />} />
+              <Route path="new" element={<PaymentNew />} />
+            </Route>
+            <Route path="salaries">
+              <Route index element={<Navigate to="new" replace />} />
+              <Route path="new" element={<SalaryEditor />} />
+              <Route path="records" element={<EmployeePayRecord />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>
-          <Route path="salaries">
-            <Route index element={<Navigate to="new" replace />} />
-            <Route path="new" element={<SalaryEditor />} />
-            <Route path="records" element={<EmployeePayRecord />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
 
         {/* PUBLIC SITE */}
@@ -168,8 +188,8 @@ export default function App() {
             <Route path="order" element={<Order />} />
             <Route path="order/:id" element={<Order />} />
             {/* Google Pay checkout page */}
-            <Route path="payment" element={<PaymentMethod />} />{" "}
-            {/* ⬅️ added */}
+            <Route path="payment" element={<PaymentMethod />} />
+            <Route path="myorders" element={<OrderView />} />
           </Route>
 
           <Route element={<Layout2 />}>

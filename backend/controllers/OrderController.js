@@ -1,291 +1,250 @@
-import asyncHandler from "express-async-handler";
+import mongoose from "mongoose";
 import Order from "../models/orderModel.js";
 
-/* POST /api/order/create */
-export const createOrder = asyncHandler(async (req, res) => {
-  console.log(
-    "➡️ /api/order/create content-type:",
-    req.headers["content-type"]
-  );
-  console.log("➡️ /api/order/create payload:", req.body);
+const cleanPhone = (v = "") => (v || "").replace(/[\s\-()+]/g, "");
+const isValidPhone = (v = "") => /^\d{10,15}$/.test(cleanPhone(v));
 
-  const {
-    // product snapshot
-    productId,
-    productName,
-    imageUrl,
-    basePrice,
-
-    // customer / delivery
-    customerName,
-    customerPhone,
-    deliveryAddress,
-    deliveryDate,
-    deliveryTime,
-    specialInstructions,
-
-    // options
-    size,
-    quantity,
-    frosting,
-    messageOnCake,
-
-    // payment
-    paymentMethod,
-    subtotal,
-    tax,
-    total,
-    deliveryFee,
-  } = req.body || {};
-
-  // requireds
-  if (!customerName || !customerPhone || !deliveryAddress || !deliveryDate) {
-    res.status(400);
-    throw new Error(
-      "Please provide all required fields: customerName, customerPhone, deliveryAddress, and deliveryDate"
-    );
-  }
-
-  const cleanPhone = (customerPhone || "").replace(/[\s\-\(\)\+]/g, "");
-  if (!/^\d{10,15}$/.test(cleanPhone)) {
-    res.status(400);
-    throw new Error("Please provide a valid phone number (10-15 digits)");
-  }
-
-  const deliveryDateObj =
-    typeof deliveryDate === "string" ? new Date(deliveryDate) : deliveryDate;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (!(deliveryDateObj instanceof Date) || isNaN(+deliveryDateObj)) {
-    res.status(400);
-    throw new Error("Invalid delivery date");
-  }
-  if (deliveryDateObj <= today) {
-    res.status(400);
-    throw new Error("Delivery date must be in the future");
-  }
-
-  const qty = parseInt(quantity, 10);
-  if (!qty || qty < 1 || qty > 50) {
-    res.status(400);
-    throw new Error("Quantity must be between 1 and 50");
-  }
-  if (!["small", "medium", "large"].includes(size)) {
-    res.status(400);
-    throw new Error("Invalid cake size. Must be small, medium, or large");
-  }
-  if (!["butterCream", "creamCheese", "chocolateFrosting"].includes(frosting)) {
-    res.status(400);
-    throw new Error("Invalid frosting type");
-  }
-  if (!["creditCard", "afterpay", "cashOnDelivery"].includes(paymentMethod)) {
-    res.status(400);
-    throw new Error("Invalid payment method");
-  }
-
-  const snapshotName = (productName || "Chocolate Fudge Cake").trim();
-  const snapshotBasePrice = Number(basePrice ?? subtotal ?? total ?? 0);
-  if (isNaN(snapshotBasePrice)) {
-    res.status(400);
-    throw new Error("Invalid basePrice");
-  }
-
-  console.log("🖼 saving product.imageUrl:", imageUrl);
-
-  const order = new Order({
-    product: {
-      id: productId || undefined,
-      name: snapshotName,
-      imageUrl: imageUrl || "", // <- stored in DB
-      basePrice: snapshotBasePrice,
-    },
-    customer: {
-      name: customerName.trim(),
-      phone: cleanPhone,
-      address: deliveryAddress.trim(),
-    },
-    item: {
-      name: snapshotName,
-      size,
-      quantity: qty,
-      frosting,
-      messageOnCake: (messageOnCake || "").trim(),
-    },
-    delivery: {
-      date: deliveryDateObj,
-      time: deliveryTime || "afternoon",
-      specialInstructions: (specialInstructions || "").trim(),
-    },
-    payment: {
-      method: paymentMethod,
-      subtotal: Number(subtotal) || 0,
-      tax: Number(tax) || 0,
-      deliveryFee: Number(deliveryFee ?? 500),
-      total: Number(total) || 0,
-    },
-    price: Number(total) || 0,
-    status: "Preparing",
-  });
-
+export const createOrder = async (req, res) => {
   try {
-    const saved = await order.save();
-    console.log(
-      `✅ Order created: ${saved.orderId} • ${saved.customer.name} • Rs ${saved.payment.total}`
-    );
-    res.status(201).json({
+    const b = req.body || {};
+
+    // Accept nested OR flat payloads
+    const product = b.product || {
+      id: b.productId,
+      name: b.productName,
+      imageUrl: b.imageUrl,
+      basePrice: b.basePrice,
+    };
+
+    const customerId = b.customerId;
+
+    const customer = b.customer || {
+      name: b.customerName, // ⬅ may be empty
+      phone: b.customerPhone,
+      address: b.deliveryAddress,
+    };
+
+    const delivery = b.delivery || {
+      date: b.deliveryDate,
+      time: b.deliveryTime,
+      specialInstructions: b.specialInstructions,
+    };
+
+    const item = b.item || {
+      name: b.productName,
+      size: b.size,
+      quantity: b.quantity,
+      frosting: b.frosting,
+      messageOnCake: b.messageOnCake,
+    };
+
+    const payment = b.payment || {
+      method: b.paymentMethod,
+      subtotal: b.subtotal,
+      tax: b.tax,
+      deliveryFee: b.deliveryFee,
+      total: b.total,
+    };
+
+    // ---------- Validation ----------
+    if (!customerId)
+      return res.status(400).json({ error: "customerId is required" });
+
+    // ✅ name is OPTIONAL — do NOT enforce
+    if (!isValidPhone(customer?.phone))
+      return res
+        .status(400)
+        .json({ error: "Please provide a valid phone number (10-15 digits)" });
+
+    if (!customer?.address?.trim())
+      return res.status(400).json({ error: "deliveryAddress is required" });
+
+    if (!delivery?.date)
+      return res.status(400).json({ error: "deliveryDate is required" });
+
+    if (!payment?.method)
+      return res.status(400).json({ error: "paymentMethod is required" });
+
+    // ---------- Create ----------
+    const doc = await Order.create({
+      product: {
+        id: product?.id || undefined,
+        name: (product?.name || "Chocolate Fudge Cake").trim(),
+        imageUrl: product?.imageUrl || "",
+        basePrice: Number(
+          product?.basePrice ?? payment?.subtotal ?? payment?.total ?? 0
+        ),
+      },
+      customerId,
+      customer: {
+        name: (customer?.name || "").trim(), // store empty string if absent
+        phone: cleanPhone(customer.phone),
+        address: customer.address.trim(),
+      },
+      item: {
+        name: item?.name || product?.name || "Chocolate Fudge Cake",
+        size: item?.size || "medium",
+        quantity: Math.max(1, parseInt(item?.quantity || 1, 10)),
+        frosting: item?.frosting || "butterCream",
+        messageOnCake: (item?.messageOnCake || "").trim(),
+      },
+      delivery: {
+        date: new Date(delivery.date),
+        time: delivery?.time || "afternoon",
+        specialInstructions: (delivery?.specialInstructions || "").trim(),
+      },
+      payment: {
+        method: payment.method,
+        subtotal: Number(payment?.subtotal) || 0,
+        tax: Number(payment?.tax) || 0,
+        deliveryFee: Number(payment?.deliveryFee ?? 500),
+        total: Number(payment?.total) || 0,
+      },
+      price: Number(payment?.total ?? product?.basePrice ?? 0),
+      status: "Preparing",
+    });
+
+    return res.status(201).json({
       success: true,
       message: "Order created successfully!",
-      order: {
-        _id: saved._id,
-        orderId: saved.orderId,
-        product: saved.product, // includes name, imageUrl, basePrice
-        customer: saved.customer.name,
-        item: saved.item,
-        total: saved.payment.total,
-        deliveryDate: saved.delivery.date,
-        status: saved.status,
-      },
+      order: doc,
     });
   } catch (err) {
-    console.error("❌ Order save failed:", err.message, err.errors);
-    res
-      .status(400)
-      .json({ success: false, error: err.message, details: err.errors });
+    console.error("❌ createOrder error:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error: could not create order" });
   }
-});
+};
 
-/* GET /api/order/:id */
-export const getOrderById = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id);
-  if (!order) {
-    res.status(404);
-    throw new Error("Order not found");
-  }
-  res.json({ success: true, order });
-});
-
-/* GET /api/order/track/:orderId */
-export const getOrderByOrderId = asyncHandler(async (req, res) => {
-  const order = await Order.findOne({ orderId: req.params.orderId });
-  if (!order) {
-    res.status(404);
-    throw new Error("Order not found");
-  }
-  res.json({ success: true, order });
-});
-
-/* POST /api/order/validate */
-export const validateOrderData = asyncHandler(async (req, res) => {
-  const {
-    customerName,
-    customerPhone,
-    deliveryAddress,
-    deliveryDate,
-    size,
-    quantity,
-  } = req.body || {};
-  const errors = [];
-  if (!customerName?.trim()) errors.push("Customer name is required");
-  if (!customerPhone?.trim()) errors.push("Phone number is required");
-  if (!deliveryAddress?.trim()) errors.push("Delivery address is required");
-  if (!deliveryDate) errors.push("Delivery date is required");
-  if (deliveryDate) {
-    const dd = new Date(deliveryDate);
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    if (dd <= t) errors.push("Delivery date must be in the future");
-  }
-  if (customerPhone) {
-    const clean = customerPhone.replace(/[\s\-\(\)\+]/g, "");
-    if (!/^\d{10,15}$/.test(clean))
-      errors.push("Please provide a valid phone number (10-15 digits)");
-  }
-  const qty = parseInt(quantity, 10);
-  if (!qty || qty < 1 || qty > 50)
-    errors.push("Quantity must be between 1 and 50");
-  if (!["small", "medium", "large"].includes(size))
-    errors.push("Please select a valid cake size");
-  if (errors.length) {
-    res.status(400);
-    throw new Error(`Validation failed: ${errors.join(", ")}`);
-  }
-  res.json({ success: true, message: "Order data is valid" });
-});
-
-/* POST /api/order/calculate-price */
-export const calculateOrderPrice = asyncHandler(async (req, res) => {
-  const { size, quantity, basePrice = 3000 } = req.body || {};
-  const base = Number(basePrice) || 3000;
-
-  let sizeMultiplier = 1;
-  if (size === "medium") sizeMultiplier = 1.08;
-  else if (size === "large") sizeMultiplier = 1.15;
-
-  const qty = parseInt(quantity, 10) || 1;
-  const unit = Math.round(base * sizeMultiplier);
-  const subtotal = unit * qty;
-  const tax = Math.round(subtotal * 0.08);
-  const deliveryFee = 500;
-  const total = subtotal + tax + deliveryFee;
-
-  res.json({
-    success: true,
-    pricing: {
-      basePrice: base,
-      sizeMultiplier,
-      unit,
-      quantity: qty,
-      subtotal,
-      tax,
-      deliveryFee,
-      total,
-    },
-  });
-});
-
-/* GET /api/order/available-dates */
-export const getAvailableDeliveryDates = asyncHandler(async (_req, res) => {
-  const today = new Date();
-  const availableDates = [];
-  for (let i = 1; i <= 30; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    if (d.getDay() !== 0) {
-      availableDates.push({
-        date: d.toISOString().split("T")[0],
-        dayName: d.toLocaleDateString("en-US", { weekday: "long" }),
-        available: true,
-      });
+export const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid order id" });
     }
+    const order = await Order.findById(id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    return res.json({ order });
+  } catch (err) {
+    console.error("❌ getOrderById error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-  res.json({ success: true, availableDates });
-});
+};
 
-/* GET /api/order/cake-options */
-export const getCakeOptions = asyncHandler(async (_req, res) => {
-  res.json({
-    success: true,
-    cakeOptions: {
+export const getOrderByOrderId = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) return res.status(400).json({ error: "orderId is required" });
+    const order = await Order.findOne({ orderId });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    return res.json({ order });
+  } catch (err) {
+    console.error("❌ getOrderByOrderId error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const trackOrderByOrderId = (req, res) => getOrderByOrderId(req, res);
+
+export const getOrdersByCustomer = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    if (!customerId)
+      return res.status(400).json({ error: "customerId is required" });
+    const orders = await Order.find({ customerId })
+      .sort({ createdAt: -1 })
+      .limit(200);
+    return res.json({ orders });
+  } catch (err) {
+    console.error("❌ getOrdersByCustomer error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const validateOrderData = async (req, res) => {
+  try {
+    const b = req.body || {};
+    const customer = b.customer || {};
+    const errors = [];
+
+    // ✅ do NOT require name
+    const phone = b.customerPhone || customer.phone;
+    if (!isValidPhone(phone))
+      errors.push("Valid 10–15 digit customerPhone is required");
+
+    const address = b.deliveryAddress || customer.address;
+    if (!address?.trim()) errors.push("deliveryAddress is required");
+
+    const date = b.deliveryDate || b.delivery?.date;
+    if (!date) errors.push("deliveryDate is required");
+
+    const method = b.paymentMethod || b.payment?.method;
+    if (!method) errors.push("paymentMethod is required");
+
+    if (b.quantity && Number(b.quantity) < 1)
+      errors.push("quantity must be at least 1");
+
+    if (errors.length) return res.status(400).json({ valid: false, errors });
+    return res.json({ valid: true });
+  } catch (err) {
+    console.error("❌ validateOrderData error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const calculateOrderPrice = async (req, res) => {
+  try {
+    const { basePrice = 0, size = "medium", qty = 1 } = req.body || {};
+    const sizeAdj = size === "large" ? 0.15 : size === "medium" ? 0.08 : 0;
+    const unit = Math.round(Number(basePrice) * (1 + sizeAdj));
+    const quantity = Math.max(1, parseInt(qty || 1, 10));
+    const subtotal = unit * quantity;
+    const tax = Math.round(subtotal * 0.08);
+    const deliveryFee = 500;
+    const total = subtotal + tax + deliveryFee;
+    return res.json({ unit, subtotal, tax, deliveryFee, total });
+  } catch (err) {
+    console.error("❌ calculateOrderPrice error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const getAvailableDeliveryDates = async (_req, res) => {
+  try {
+    const days = [];
+    const now = new Date();
+    for (let i = 1; i <= 14; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() + i);
+      days.push(d.toISOString().split("T")[0]);
+    }
+    return res.json({ dates: days });
+  } catch (err) {
+    console.error("❌ getAvailableDeliveryDates error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const getCakeOptions = async (_req, res) => {
+  try {
+    return res.json({
       sizes: [
-        { value: "small", label: "Small (Serves 6–8)", price: 3000 },
-        { value: "medium", label: "Medium (Serves 10–12)", price: 3240 },
-        { value: "large", label: "Large (Serves 15–18)", price: 3450 },
+        { value: "small", label: "Small", adj: 0 },
+        { value: "medium", label: "Medium (+8%)", adj: 0.08 },
+        { value: "large", label: "Large (+15%)", adj: 0.15 },
       ],
-      frostings: [
+      frosting: [
         { value: "butterCream", label: "Butter Cream" },
         { value: "creamCheese", label: "Cream Cheese" },
         { value: "chocolateFrosting", label: "Chocolate Ganache" },
       ],
-      deliveryTimes: [
-        { value: "morning", label: "Morning (9–12)" },
-        { value: "afternoon", label: "Afternoon (12–4)" },
-        { value: "evening", label: "Evening (4–7)" },
-      ],
-      paymentMethods: [
-        { value: "creditCard", label: "Credit / Debit Card" },
-        { value: "afterpay", label: "Afterpay" },
-        { value: "cashOnDelivery", label: "Cash on Delivery" },
-      ],
-    },
-  });
-});
+      timeSlots: ["morning", "afternoon", "evening"],
+      deliveryFee: 500,
+      taxRate: 0.08,
+    });
+  } catch (err) {
+    console.error("❌ getCakeOptions error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};

@@ -13,7 +13,7 @@ const Header2 = () => {
           <div className="sidebar-nav">
             <div className="navbar navbar-default" role="navigation">
               <div className="navbar-header">
-                {/* collapse button (pure React, no jQuery) */}
+                {/* collapse button */}
                 <button
                   type="button"
                   className="navbar-toggle"
@@ -68,41 +68,19 @@ const Header2 = () => {
                     <NavLink to="/contact">Contact</NavLink>
                   </li>
 
-                  <li className="dropdown">
-                    {/* Make the dropdown toggle a button to avoid page jump */}
-                    <button
-                      type="button"
-                      className="dropdown-toggle"
-                      data-toggle="dropdown"
-                      onClick={(e) =>
-                        e.currentTarget.parentElement.classList.toggle("open")
-                      }
-                      aria-haspopup="true"
-                      aria-expanded="false"
-                      style={{ background: "transparent", border: 0 }}
-                    >
-                      Pages <span className="caret"></span>
-                    </button>
-                    <ul className="dropdown-menu">
-                      <li>
-                        <NavLink to="/blog">Blog Home</NavLink>
-                      </li>
-                      {/* Define this route later or remove the item */}
-                      <li>
-                        <NavLink to="/blog-single">Blog Single</NavLink>
-                      </li>
-                      <li>
-                        <NavLink to="/elements">Elements page</NavLink>
-                      </li>
-                    </ul>
+                  {/* 🔐 Auth links */}
+                  <li style={{ marginTop: 12 }}>
+                    <NavLink to="/login">Log In</NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="/signup" className="signup-accent">
+                      Sign Up
+                    </NavLink>
                   </li>
                 </ul>
               </div>
-              {/*/.nav-collapse */}
             </div>
-            {/*/navbar */}
           </div>
-          {/*/sidebar-nav */}
 
           {/* Sidebar info */}
           <div className="navbar-info hidden-sm hidden-xs hidden-md">
@@ -132,7 +110,6 @@ const Header2 = () => {
             </div>
           </div>
         </div>
-        {/* /affix-sidebar */}
       </div>
     </>
   );

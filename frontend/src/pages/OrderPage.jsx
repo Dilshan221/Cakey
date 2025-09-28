@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { apiService } from "../services/api";
+import { authStorage } from "../utils/authStorage";
 
 const PLACEHOLDER_IMG = "/assets/img/menu/price1.jpg";
 
@@ -39,14 +40,14 @@ export default function OrderPage() {
   const { state } = useLocation();
   const params = useParams();
 
-  // remove template scroll locks
+  // unlock any template scroll locks
   useEffect(() => {
     document.documentElement.style.overflowY = "auto";
     document.body.style.overflowY = "auto";
     document.body.style.overflow = "auto";
   }, []);
 
-  // product (from state or fetched by :id)
+  // product
   const productFromState = state?.product || null;
   const [product, setProduct] = useState(productFromState);
   const [loading, setLoading] = useState(!productFromState && !!params.id);
@@ -73,7 +74,7 @@ export default function OrderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
-  // If user hit /order directly (no :id and no state), route back
+  // if no product at all, bounce to menu
   useEffect(() => {
     if (!loading && !product) {
       const t = setTimeout(() => navigate("/menu"), 2000);
@@ -135,43 +136,48 @@ export default function OrderPage() {
     alert(`Added "${product.name}" to cart`);
   };
 
+  // ✅ name is NOT required
   const validToSubmit =
     !!product &&
-    customer.name.trim() &&
     isValidPhone(customer.phone) &&
     customer.address.trim() &&
     customer.date;
 
-  // Build order draft for card payments
+  // draft for card flow
   const buildOrderDraft = () => {
     if (!product) return null;
-    const imageUrl =
-      product.imageUrl && product.imageUrl.trim()
-        ? product.imageUrl
-        : PLACEHOLDER_IMG;
     return {
-      productId: product._id,
-      productName: product.name,
-      imageUrl, // <- always present
-      basePrice: Number(product.price) || 0,
-
-      customerName: customer.name,
-      customerPhone: cleanPhone(customer.phone),
-      deliveryAddress: customer.address,
-      deliveryDate: customer.date,
-      deliveryTime: customer.timeSlot,
-      specialInstructions: note,
-
-      size,
-      quantity: Math.max(1, parseInt(qty || 1, 10)),
-      frosting,
-
-      subtotal,
-      tax,
-      total,
-      deliveryFee,
-
-      paymentMethod: "creditCard",
+      product: {
+        id: product._id,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        basePrice: Number(product.price) || 0,
+      },
+      customer: {
+        name: customer.name || "",
+        phone: cleanPhone(customer.phone),
+        address: customer.address,
+      },
+      item: {
+        name: product.name,
+        size,
+        quantity: Math.max(1, parseInt(qty || 1, 10)),
+        frosting,
+        messageOnCake: note || undefined,
+      },
+      delivery: {
+        date: customer.date,
+        time: customer.timeSlot,
+        specialInstructions: note || undefined,
+      },
+      payment: {
+        method: "creditCard",
+        subtotal,
+        tax,
+        deliveryFee,
+        total,
+      },
+      price: Number(product.price) || 0,
     };
   };
 
@@ -185,68 +191,70 @@ export default function OrderPage() {
       return;
     }
     if (!validToSubmit) {
-      setSubmitError(
-        "Please fill in all required fields (valid phone: 10–15 digits)."
-      );
-      alert("Please fill in all required fields.");
+      const msg = "Please fill phone, address and date (phone: 10–15 digits).";
+      setSubmitError(msg);
+      alert(msg);
       return;
     }
 
-    // card flow -> separate page
+    const user = authStorage.getUser();
+    const userId = user?._id || null;
+
+    // Card: go to /payment with draft (order created after payment)
     if (payment === "creditCard") {
       const draft = buildOrderDraft();
       if (!draft) return;
+      draft.customerId = userId; // enforce login on /payment if needed
       navigate("/payment", { state: { orderDraft: draft } });
       return;
     }
 
-    // Afterpay / COD => create order now
+    // COD / Afterpay: create order immediately
     try {
       setPlacing(true);
 
-      const imageUrl =
-        product.imageUrl && product.imageUrl.trim()
-          ? product.imageUrl
-          : PLACEHOLDER_IMG;
-
       const payload = {
-        productId: product._id,
-        productName: product.name,
-        imageUrl, // <- always present
-        basePrice: Number(product.price) || 0,
-
-        customerName: customer.name,
-        customerPhone: cleanPhone(customer.phone),
-        deliveryAddress: customer.address,
-        deliveryDate: customer.date,
-        deliveryTime: customer.timeSlot,
-        specialInstructions: note,
-
-        size,
-        quantity: Math.max(1, parseInt(qty || 1, 10)),
-        frosting,
-
-        paymentMethod: payment,
-
-        subtotal,
-        tax,
-        total,
-        deliveryFee,
+        customerId: userId,
+        product: {
+          id: product._id,
+          name: product.name,
+          imageUrl: product.imageUrl,
+          basePrice: Number(product.price) || 0,
+        },
+        customer: {
+          name: customer.name || "",
+          phone: cleanPhone(customer.phone),
+          address: customer.address,
+        },
+        item: {
+          name: product.name,
+          size,
+          quantity: Math.max(1, parseInt(qty || 1, 10)),
+          frosting,
+          messageOnCake: note || undefined,
+        },
+        delivery: {
+          date: customer.date,
+          time: customer.timeSlot,
+          specialInstructions: note || undefined,
+        },
+        payment: {
+          method: payment,
+          subtotal,
+          tax,
+          deliveryFee,
+          total,
+        },
+        price: Number(product.price) || 0,
       };
-
-      console.log("📤 Submitting order payload:", payload);
 
       const res = await apiService.request("/order/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: payload,
       });
 
-      console.log("✅ Order API response:", res);
-
       const orderId = res?.order?.orderId || res?.orderId || res?._id || null;
       setLastOrderId(orderId);
-
       alert(
         `🎉 Order placed successfully!\n\n📋 Order ID: ${orderId || "N/A"}`
       );
@@ -489,7 +497,7 @@ export default function OrderPage() {
                     <label>Message on cake (optional)</label>
                     <input
                       type="text"
-                      placeholder="Happy Birthday Tharindu!"
+                      placeholder="Happy Birthday!"
                       className="form-control"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
@@ -534,14 +542,13 @@ export default function OrderPage() {
                   </div>
                   <div className="row" style={{ marginBottom: 10 }}>
                     <div className="col-md-6" style={{ marginBottom: 10 }}>
-                      <label>Your Name</label>
+                      <label>Your Name (optional)</label>
                       <input
                         type="text"
                         value={customer.name}
                         onChange={(e) =>
                           setCustomer((s) => ({ ...s, name: e.target.value }))
                         }
-                        required
                         className="form-control"
                       />
                     </div>
@@ -594,25 +601,7 @@ export default function OrderPage() {
                             name="payment"
                             value="creditCard"
                             checked={payment === "creditCard"}
-                            onChange={() => {
-                              setPayment("creditCard");
-                              if (
-                                !customer.name ||
-                                !isValidPhone(customer.phone) ||
-                                !customer.address ||
-                                !customer.date
-                              ) {
-                                alert(
-                                  "Please fill delivery information (valid phone: 10–15 digits) before paying."
-                                );
-                                return;
-                              }
-                              const draft = buildOrderDraft();
-                              if (!draft) return;
-                              navigate("/payment", {
-                                state: { orderDraft: draft },
-                              });
-                            }}
+                            onChange={() => setPayment("creditCard")}
                             style={{ marginRight: 6 }}
                           />
                           Credit / Debit Card
@@ -662,7 +651,7 @@ export default function OrderPage() {
                     title={
                       validToSubmit
                         ? "Place Order"
-                        : "Fill all required fields to enable"
+                        : "Fill phone, address and date to enable"
                     }
                   >
                     {placing ? "🔄 Placing Order..." : "🎂 Place Order"}
@@ -686,7 +675,7 @@ export default function OrderPage() {
           </div>
         </section>
 
-        {/* Decorative divider must not block clicks */}
+        {/* decorative divider must not block clicks */}
         <div className="divider-top divider-home" />
       </div>
 

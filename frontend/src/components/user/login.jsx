@@ -1,4 +1,4 @@
-// src/components/user/login.jsx
+// src/components/user/Login.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,6 +15,7 @@ import {
   faTwitter,
 } from "@fortawesome/free-brands-svg-icons";
 import { apiService } from "../../services/api";
+import { authStorage } from "../../utils/authStorage";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -65,9 +66,10 @@ export default function Login() {
               body: { email, password },
             });
 
-      if (data?.token) localStorage.setItem("cb_token", data.token);
-      if (data?.user)
-        localStorage.setItem("cb_user", JSON.stringify(data.user));
+      // persist auth via authStorage (keeps everything consistent)
+      if (data?.token) authStorage.setToken(data.token, true);
+      if (data?.user) authStorage.setUser(data.user, true);
+      authStorage.applyToApiService();
 
       const role = String(data?.user?.role || "customer")
         .trim()
@@ -75,8 +77,7 @@ export default function Login() {
       if (role === "admin") {
         navigate("/admin?view=attendance", { replace: true });
       } else {
-        // ✅ Customer → RegisterHome page
-        navigate("/register", { replace: true });
+        navigate("/", { replace: true }); // Customer -> RegisterHome
       }
     } catch (err) {
       const msg =
@@ -187,7 +188,11 @@ export default function Login() {
                 />
                 <label htmlFor="remember">Remember me</label>
               </div>
-              <a href="#" className="forgot-password">
+              <a
+                href="#"
+                className="forgot-password"
+                onClick={(e) => e.preventDefault()}
+              >
                 Forgot Password?
               </a>
             </div>
@@ -231,7 +236,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Scoped styles (unchanged) */}
+      {/* Scoped styles */}
       <style>{`
         * { box-sizing: border-box; }
         .cb-login-wrapper {
