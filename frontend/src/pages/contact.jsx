@@ -1,7 +1,7 @@
 // src/pages/contact.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ReviewsAPI } from "../services/api"; // ✅ import your API wrapper
+import { ReviewsAPI } from "../services/api";
 
 const Contact = () => {
   const [rating, setRating] = useState(0);
@@ -12,35 +12,65 @@ const Contact = () => {
 
   const submitReview = async (e) => {
     e.preventDefault();
+    
+    // Debug: Log to verify function is called
+    console.log("🔍 Submit button clicked!");
+    console.log("Current rating:", rating);
 
+    // Validate rating first
     if (rating === 0) {
-      setMessage("Please select a rating");
+      setMessage("⚠️ Please select a rating before submitting");
       setIsSuccess(false);
       return;
     }
 
+    // Set loading state
     setLoading(true);
     setMessage("");
 
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    data.rating = rating;
-
     try {
-      // ✅ use ReviewsAPI instead of hard-coded fetch
-      await ReviewsAPI.create(data);
+      // Collect form data
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+      data.rating = rating;
 
-      setMessage("Review submitted successfully!");
+      // Debug: Log the data being sent
+      console.log("📤 Submitting review data:", data);
+
+      // Call API
+      const response = await ReviewsAPI.create(data);
+      
+      // Debug: Log successful response
+      console.log("✅ API Response:", response);
+
+      // Show success message
+      setMessage("✨ Review submitted successfully! Thank you for your feedback.");
       setIsSuccess(true);
+      
+      // Reset form
       e.target.reset();
       setRating(0);
+
+      // Optional: Auto-clear success message after 5 seconds
+      setTimeout(() => {
+        setMessage("");
+      }, 5000);
+
     } catch (err) {
-      setMessage(
-        err?.data?.message || err?.message || "Network error. Please try again."
-      );
+      // Debug: Log error
+      console.error("❌ Error submitting review:", err);
+      
+      // Show error message
+      const errorMsg = err?.response?.data?.message || 
+                      err?.data?.message || 
+                      err?.message || 
+                      "Network error. Please try again.";
+      
+      setMessage(errorMsg);
       setIsSuccess(false);
     } finally {
       setLoading(false);
+      console.log("🏁 Submit process completed");
     }
   };
 
@@ -123,6 +153,7 @@ const Contact = () => {
                     className={`alert ${
                       isSuccess ? "alert-success" : "alert-danger"
                     } text-center`}
+                    role="alert"
                   >
                     {message}
                   </div>
@@ -139,6 +170,7 @@ const Contact = () => {
                         name="name"
                         className="form-control input-field"
                         required
+                        placeholder="Enter your name"
                       />
                     </div>
                     <div className="col-md-6">
@@ -150,6 +182,7 @@ const Contact = () => {
                         name="email"
                         className="form-control input-field"
                         required
+                        placeholder="your.email@example.com"
                       />
                     </div>
                   </div>
@@ -189,12 +222,15 @@ const Contact = () => {
                               star <= rating ? "text-warning" : "text-secondary"
                             }`}
                             style={{ cursor: "pointer", marginRight: "8px" }}
-                            onClick={() => setRating(star)}
+                            onClick={() => {
+                              setRating(star);
+                              console.log("⭐ Rating set to:", star);
+                            }}
                           ></i>
                         ))}
                       </div>
                       <small>
-                        {rating > 0 ? `You rated ${rating}/5` : "Click to rate"}
+                        {rating > 0 ? `You rated ${rating}/5 ⭐` : "Click to rate"}
                       </small>
                     </div>
                   </div>
@@ -209,6 +245,7 @@ const Contact = () => {
                         className="textarea-field form-control"
                         rows="4"
                         required
+                        placeholder="Share your experience with us..."
                       ></textarea>
                     </div>
                   </div>
@@ -218,9 +255,26 @@ const Contact = () => {
                       type="submit"
                       className="btn btn-primary"
                       disabled={loading || rating === 0}
+                      style={{
+                        opacity: loading || rating === 0 ? 0.6 : 1,
+                        cursor: loading || rating === 0 ? "not-allowed" : "pointer"
+                      }}
                     >
-                      {loading ? "Submitting..." : "Submit Review"}
+                      {loading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Submitting...
+                        </>
+                      ) : (
+                        "Submit Review"
+                      )}
                     </button>
+                    
+                    {rating === 0 && !loading && (
+                      <small className="text-danger ms-2">
+                        ⚠️ Please select a rating
+                      </small>
+                    )}
                   </div>
                 </form>
               </div>

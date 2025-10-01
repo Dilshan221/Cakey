@@ -30,7 +30,7 @@ import RegisterUser from "./pages/registerhome";
 import Order from "./pages/OrderPage";
 import PaymentMethod from "./pages/PaymentMethod";
 import OrderView from "./pages/OrderView";
-import ComplaintPage from "./pages/contact";
+import ComplaintPage from "./pages/Complaint";
 
 /* ---------- Auth ---------- */
 import Signup from "./components/user/signup";
