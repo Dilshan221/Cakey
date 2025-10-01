@@ -1,7 +1,4 @@
 // src/services/api.js
-//
-// Resolves API base (supports Vite & CRA). Defaults to http://localhost:8000/api
-//
 const ENV =
   (typeof import.meta !== "undefined" && import.meta.env) || process.env;
 
@@ -12,7 +9,6 @@ export const API_BASE_URL =
   ENV?.REACT_APP_API_URL ||
   "http://localhost:8000/api";
 
-/* ------------------------------ Small utils ------------------------------ */
 const qs = (obj = {}) => {
   const params = new URLSearchParams();
   Object.entries(obj).forEach(([k, v]) => {
@@ -27,10 +23,9 @@ const qs = (obj = {}) => {
 const isFormData = (v) =>
   typeof FormData !== "undefined" && v instanceof FormData;
 
-// Join base + endpoint safely; allow absolute endpoints to pass through
 const resolveUrl = (base, endpoint) => {
   if (!endpoint) return base;
-  if (/^https?:\/\//i.test(endpoint)) return endpoint; // absolute
+  if (/^https?:\/\//i.test(endpoint)) return endpoint;
   if (base.endsWith("/") && endpoint.startsWith("/"))
     return base + endpoint.slice(1);
   if (!base.endsWith("/") && !endpoint.startsWith("/"))
@@ -38,7 +33,6 @@ const resolveUrl = (base, endpoint) => {
   return base + endpoint;
 };
 
-/* ------------------------------ Auth store ------------------------------ */
 const authStore = {
   getToken() {
     return localStorage.getItem("cb_token");
@@ -60,18 +54,13 @@ const authStore = {
   },
 };
 
-/* ------------------------------ Core client ------------------------------ */
-let AUTH_TOKEN = null; // allows authStorage.applyToApiService() to set header
+let AUTH_TOKEN = null;
 
 export const apiService = {
-  /** Set the token programmatically (used by authStorage.applyToApiService) */
   setAuthToken(token) {
     AUTH_TOKEN = token || null;
   },
 
-  /**
-   * Fetch wrapper with JSON headers/Authorization, timeout, JSON parsing, etc.
-   */
   async request(endpoint, options = {}) {
     const url = resolveUrl(API_BASE_URL, endpoint);
     const token = AUTH_TOKEN ?? authStore.getToken();
@@ -82,7 +71,6 @@ export const apiService = {
     let timer = null;
     if (controller) timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    // Build headers. Respect caller's headers and avoid forcing JSON for FormData.
     const initialHeaders = options.headers || {};
     const usingFormData = isFormData(options.body);
 
@@ -149,12 +137,12 @@ export const apiService = {
     }
   },
 
-  /* ------------------------------ Health ------------------------------ */
+  /* Health */
   testConnection() {
     return this.request("/health");
   },
 
-  /* -------------------------------- Auth -------------------------------- */
+  /* Auth */
   async login(credentials) {
     const data = await this.request("/usermanagement/login", {
       method: "POST",
@@ -171,35 +159,12 @@ export const apiService = {
     return authStore.currentUser();
   },
 
-  /* ----------------------- User Management (legacy) ----------------------- */
-  registerUser(userData) {
-    return this.request("/usermanagement/register", {
-      method: "POST",
-      body: userData,
-    });
-  },
-  getUserById(id) {
-    return this.request(`/usermanagement/${id}`);
-  },
-  updateUserLegacy(id, userData) {
-    return this.request(`/usermanagement/${id}`, {
-      method: "PUT",
-      body: userData,
-    });
-  },
-  deleteUserLegacy(id) {
-    return this.request(`/usermanagement/${id}`, { method: "DELETE" });
-  },
-
-  /* ------------------------------ Products ----------------------------- */
+  /* Products */
   listProducts(query = {}) {
     return this.request(`/products${qs(query)}`);
   },
   getProduct(id) {
     return this.request(`/products/${id}`);
-  },
-  getProductById(id) {
-    return this.getProduct(id);
   },
   createProduct(payload) {
     return this.request("/products", { method: "POST", body: payload });
@@ -210,16 +175,10 @@ export const apiService = {
   deleteProduct(id) {
     return this.request(`/products/${id}`, { method: "DELETE" });
   },
-  listProductCategories() {
-    return this.request("/products/categories");
-  },
 
-  /* ------------------------------ Employees ---------------------------- */
+  /* Employees */
   listEmployees(query = {}) {
     return this.request(`/employees${qs(query)}`);
-  },
-  getEmployees(query = {}) {
-    return this.listEmployees(query);
   },
   getEmployee(id) {
     return this.request(`/employees/${id}`);
@@ -233,54 +192,13 @@ export const apiService = {
   deleteEmployee(id) {
     return this.request(`/employees/${id}`, { method: "DELETE" });
   },
-  updateEmployeePayout(id, payout) {
-    return this.request(`/employees/${id}/payout`, {
-      method: "PUT",
-      body: payout,
-    });
-  },
-  uploadEmployeeAvatar(id, file) {
-    const fd = new FormData();
-    fd.append("avatar", file);
-    return this.request(`/employees/${id}/avatar`, {
-      method: "POST",
-      body: fd,
-    });
-  },
-  sendEmployeeOtp(id, phone) {
-    return this.request(`/employees/${id}/otp/send`, {
-      method: "POST",
-      body: { phone },
-    });
-  },
-  verifyEmployeeOtp(id, code) {
-    return this.request(`/employees/${id}/otp/verify`, {
-      method: "POST",
-      body: { code },
-    });
-  },
-  getEmployeeStats() {
-    return this.request("/employees/stats");
-  },
 
-  /* ------------------------------ Attendance --------------------------- */
+  /* Attendance */
   listAttendance(query = {}) {
     return this.request(`/attendance${qs(query)}`);
   },
-  getAttendance(id) {
-    return this.request(`/attendance/${id}`);
-  },
-  markAttendance(payload) {
-    return this.request("/attendance", { method: "POST", body: payload });
-  },
-  updateAttendance(id, payload) {
-    return this.request(`/attendance/${id}`, { method: "PUT", body: payload });
-  },
-  deleteAttendance(id) {
-    return this.request(`/attendance/${id}`, { method: "DELETE" });
-  },
 
-  /* ------------------------------ Payments ------------------------------ */
+  /* Payments */
   listPayments(query = {}) {
     return this.request(`/payments${qs(query)}`);
   },
@@ -294,7 +212,7 @@ export const apiService = {
     return this.request(`/payments/${id}`, { method: "DELETE" });
   },
 
-  /* ------------------------------ Users (modern) ------------------------- */
+  /* Users */
   getUsers(query = {}) {
     return this.request(`/user${qs(query)}`);
   },
@@ -311,93 +229,66 @@ export const apiService = {
     return this.request(`/user/${id}`, { method: "DELETE" });
   },
 
-  /* ------------------------------ Salaries ------------------------------ */
+  /* Salaries */
   listSalaryRecords(query = {}) {
     return this.request(`/salaries${qs(query)}`);
-  },
-  getSalaryRecords(employeeId, query = {}) {
-    return this.listSalaryRecords({ employeeId, ...query });
   },
   createSalaryRecord(payload) {
     return this.request(`/salaries`, { method: "POST", body: payload });
   },
-  updateSalaryRecord(id, payload) {
-    return this.request(`/salaries/${id}`, { method: "PUT", body: payload });
+
+  /* Orders (delivery) */
+  listOrders(query = {}) {
+    return this.request(`/delivery/orders${qs(query)}`);
   },
-  deleteSalaryRecord(id) {
-    return this.request(`/salaries/${id}`, { method: "DELETE" });
-  },
-
-  // ------------------------------- Orders ------------------------------- //
-  createOrderFromOrderPage: (ui) => {
-    let paymentMethod = "creditCard";
-    if (ui.paymentMethod === "afterpay") paymentMethod = "afterpay";
-    else if (
-      ui.paymentMethod === "cashOnDelivery" ||
-      ui.paymentMethod === "cod"
-    )
-      paymentMethod = "cashOnDelivery";
-
-    const basePrice =
-      ui.basePrice ??
-      ui.productPrice ??
-      ui.unitPrice ??
-      ui.product?.price ??
-      ui.price ??
-      0;
-
-    const body = {
-      customerId: ui.customerId,
-      customerName: ui.customer?.name,
-      customerPhone: ui.customer?.phone,
-      deliveryAddress: ui.customer?.address,
-      deliveryDate: ui.delivery?.date,
-      deliveryTime: ui.delivery?.timeSlot,
-      specialInstructions: ui.note || "",
-      size: ui.size,
-      quantity: ui.qty,
-      frosting: ui.frosting || "butterCream",
-      paymentMethod,
-      subtotal: ui.subtotal,
-      tax: ui.tax,
-      total: ui.total,
-      deliveryFee: ui.deliveryFee,
-      productId: ui.productId,
-      productName: ui.productName,
-      imageUrl: ui.imageUrl,
-      basePrice,
-    };
-
-    return this.request("/order/create", { method: "POST", body });
-  },
-
   createOrder(body) {
+    // keep your core endpoint for now
     return this.request("/order/create", { method: "POST", body });
   },
-  getOrderById(id) {
-    return this.request(`/order/${id}`);
+  updateOrderStatus(orderId, status) {
+    return this.request(`/delivery/orders/${orderId}/status`, {
+      method: "PATCH",
+      body: { status },
+    });
   },
-  trackOrderByOrderId(orderId) {
-    return this.request(`/order/track/${orderId}`);
+  deleteOrder(orderId) {
+    return this.request(`/delivery/orders/${orderId}`, { method: "DELETE" });
   },
-  getOrdersByCustomer(customerId) {
-    return this.request(`/order/customer/${customerId}`);
+
+  /* Custom Orders */
+  createCustomOrder(payload) {
+    const hasFile =
+      typeof File !== "undefined" && payload?.designImage instanceof File;
+    if (hasFile) {
+      const fd = new FormData();
+      Object.entries(payload).forEach(([k, v]) => {
+        if (v === undefined || v === null) return;
+        if (k === "designImage") fd.append("designImage", v);
+        else fd.append(k, v);
+      });
+      return this.request("/custom-orders", { method: "POST", body: fd });
+    }
+    return this.request("/custom-orders", { method: "POST", body: payload });
   },
-  validateOrderData(body) {
-    return this.request("/order/validate", { method: "POST", body });
+  listCustomOrders(query = {}) {
+    return this.request(`/custom-orders${qs(query)}`);
   },
-  calculateOrderPrice(body) {
-    return this.request("/order/calculate-price", { method: "POST", body });
+  getCustomOrdersStats() {
+    return this.request("/custom-orders/dashboard/stats");
   },
-  getAvailableDeliveryDates() {
-    return this.request("/order/available-dates");
+  updateCustomOrderStatus(orderId, status) {
+    return this.request(`/custom-orders/status/${orderId}`, {
+      method: "PATCH",
+      body: { status },
+    });
   },
-  getCakeOptions() {
-    return this.request("/order/cake-options");
+  cancelCustomOrder(orderId) {
+    return this.request(`/custom-orders/cancel/${orderId}`, {
+      method: "DELETE",
+    });
   },
 };
 
-/* ------------------------------ Reviews API ------------------------------ */
 export const ReviewsAPI = {
   list: (query = {}) => apiService.request(`/reviews${qs(query)}`),
   get: (id) => apiService.request(`/reviews/${id}`),
@@ -413,14 +304,11 @@ export const ReviewsAPI = {
   remove: (id) => apiService.request(`/reviews/${id}`, { method: "DELETE" }),
 };
 
-
-/* ----------------------------- Complaints API ---------------------------- */
 export const ComplaintsAPI = {
   list: (query = {}) => apiService.request(`/complaints${qs(query)}`),
   get: (id) => apiService.request(`/complaints/${id}`),
   create: (payload) =>
     apiService.request(`/complaints`, { method: "POST", body: payload }),
-  // Use PUT for full updates or PATCH for partial status changes
   update: (id, payload) =>
     apiService.request(`/complaints/${id}`, { method: "PUT", body: payload }),
   updateStatus: (id, status) =>
@@ -436,7 +324,6 @@ export const ComplaintsAPI = {
   remove: (id) => apiService.request(`/complaints/${id}`, { method: "DELETE" }),
 };
 
-/* ---------------- Convenience re-exports for user admin ---------------- */
 export const userMgmtAPI = {
   login: (email, password) => apiService.login({ email, password }),
   list: (q) => apiService.getUsers(q),

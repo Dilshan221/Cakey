@@ -1,25 +1,32 @@
+/// backend/index.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import morgan from "morgan";
 
-// Import routes
+dotenv.config();
+
+/* ---------------- Existing routes ---------------- */
 import attendanceRoute from "./routes/attendanceRoute.js";
 import usermanagementRoute from "./routes/usermanagementRoute.js";
 import employeeRoute from "./routes/employeeRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
 import salaryRoute from "./routes/salaryRoute.js";
 import productRoute from "./routes/Productroutes.js";
-import orderRoute from "./routes/orderRoutes.js";
+import orderRoute from "./routes/orderRoutes.js"; // core order flow (your existing)
 import reviewRoute from "./routes/reviewRoutes.js";
 import complaintRoute from "./routes/ComplaintRoutes.js";
 
-dotenv.config();
-const app = express();
+/* ---------------- Delivery routes (ESM, default export) ---------------- */
+import normalOrderRoute from "./routes/delivery/orderRoutes.js"; // Normal delivery orders
+import customOrderRoute from "./routes/delivery/customOrderRoutes.js"; // Custom/special orders
+import normalOrderDashRoute from "./routes/delivery/NormalOrderDashRoutes.js"; // KPIs/metrics
 
-// Middleware
+const app = express();
 app.disable("x-powered-by");
+
+/* ---------------- Middleware ---------------- */
 app.use(
   morgan("dev", {
     skip: (req) => req.path === "/health" || req.path === "/api/health",
@@ -28,44 +35,54 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ CORS
 const rawOrigins =
   process.env.CLIENT_ORIGIN ||
   "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173";
 const allowList = rawOrigins.split(",").map((s) => s.trim());
-const corsOptions = {
-  origin(origin, cb) {
-    if (!origin || allowList.includes(origin)) return cb(null, true);
-    return cb(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-app.use(cors(corsOptions));
 
-// Health routes
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin || allowList.includes(origin)) return cb(null, true);
+      return cb(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+/* ---------------- Health ---------------- */
 app.get("/", (_req, res) => res.json({ ok: true, service: "Cake&Bake API" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// API Routes
+/* ---------------- API (existing) ---------------- */
 app.use("/api/attendance", attendanceRoute);
 app.use("/api/usermanagement", usermanagementRoute);
 app.use("/api/employees", employeeRoute);
 app.use("/api/payments", paymentRoute);
 app.use("/api/salaries", salaryRoute);
 app.use("/api/products", productRoute);
-app.use("/api/order", orderRoute);
+app.use("/api/order", orderRoute); // core order flow
 app.use("/api/reviews", reviewRoute);
 app.use("/api/complaints", complaintRoute);
 
-// Test route
+/* ---------------- API (delivery) ---------------- */
+// Primary mount
+app.use("/api/delivery/orders", normalOrderRoute);
+// ✅ Short alias so the frontend can call /api/orders/*
+app.use("/api/orders", normalOrderRoute);
+
+app.use("/api/custom-orders", customOrderRoute);
+app.use("/api/delivery/dashboard", normalOrderDashRoute);
+
+/* ---------------- Test ---------------- */
 app.get("/api/test", (_req, res) =>
   res.json({ message: "Backend connected successfully!" })
 );
 
-// 404 handler
+/* ---------------- 404 ---------------- */
 app.use((req, res) => {
   res.status(404).json({
     error: `Route not found: ${req.originalUrl}`,
@@ -73,7 +90,7 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+/* ---------------- Error handler ---------------- */
 app.use((err, _req, res, _next) => {
   const isCors = err?.message?.startsWith("CORS blocked for origin:");
   const status =
@@ -90,18 +107,38 @@ app.use((err, _req, res, _next) => {
   res.status(status).json(payload);
 });
 
-// Mongo + server start
+/* ---------------- Mongo + start ---------------- */
 const PORT = process.env.PORT || 8000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/crud";
+const MONGO_URI =
+  process.env.MONGO_URI || "mongodb://localhost:27017/cake_bake_dev";
 
 let server;
+
 const start = async () => {
   try {
     await mongoose.connect(MONGO_URI);
     console.log("✓ Connected to MongoDB");
-    server = app.listen(PORT, () =>
-      console.log(`✓ Server running on http://localhost:${PORT}`)
-    );
+
+    server = app.listen(PORT, () => {
+      console.log(`✓ Server running on http://localhost:${PORT}`);
+      console.log("Endpoints:");
+      console.log("- Health         GET  /api/health");
+      console.log("- Attendance     /api/attendance");
+      console.log("- Users Mgmt     /api/usermanagement");
+      console.log("- Employees      /api/employees");
+      console.log("- Payments       /api/payments");
+      console.log("- Salaries       /api/salaries");
+      console.log("- Products       /api/products");
+      console.log("- Orders (core)  /api/order");
+      console.log("- Reviews        /api/reviews");
+      console.log("- Complaints     /api/complaints");
+      console.log("- Delivery:");
+      console.log(
+        "   • Normal      /api/delivery/orders  (alias: /api/orders)"
+      );
+      console.log("   • Custom      /api/custom-orders");
+      console.log("   • Dashboard   /api/delivery/dashboard");
+    });
   } catch (err) {
     console.error("Startup error:", err);
     process.exit(1);
@@ -109,7 +146,7 @@ const start = async () => {
 };
 start();
 
-// Graceful shutdown
+/* ---------------- Graceful shutdown ---------------- */
 const shutdown = async (signal) => {
   try {
     console.log(`\n${signal} received: closing server...`);
@@ -122,4 +159,7 @@ const shutdown = async (signal) => {
     process.exit(1);
   }
 };
+
 ["SIGINT", "SIGTERM"].forEach((sig) => process.on(sig, () => shutdown(sig)));
+
+export default app;
