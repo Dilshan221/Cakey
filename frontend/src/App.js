@@ -63,6 +63,12 @@ import CadminDashboard from "./components/complain/Admindashboard";
 import ReviewManagement from "./components/complain/ReviewManagement";
 import ComplaintManagement from "./components/complain/ComplaintManagement";
 
+/* ---------- Delivery Pages ---------- */
+import NormalOrder from "./components/delivery/NormalOrder";
+import NormalOrderDash from "./components/delivery/NormalOrderDash";
+import CustomOrder from "./components/delivery/CustomOrder";
+import CustomOrderDash from "./components/delivery/CustomOrderDash";
+
 /* ---------- Admin CSS Module (scoped) ---------- */
 import adminStyles from "./components/admin/styles/admin.module.css";
 
@@ -180,10 +186,15 @@ export default function App() {
               <Route path="new" element={<SalaryEditor />} />
               <Route path="records" element={<EmployeePayRecord />} />
             </Route>
-
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>
         </Route>
+
+        {/* DELIVERY ROUTES */}
+        <Route path="/normal-order" element={<NormalOrder />} />
+        <Route path="/normal-order-dash" element={<NormalOrderDash />} />
+        <Route path="/custom-order" element={<CustomOrder />} />
+        <Route path="/custom-order-dash" element={<CustomOrderDash />} />
 
         {/* PUBLIC SITE */}
         <Route element={<PublicLayout />}>
@@ -203,7 +214,6 @@ export default function App() {
             {/* Product details / checkout */}
             <Route path="order" element={<Order />} />
             <Route path="order/:id" element={<Order />} />
-            {/* Google Pay checkout page */}
             <Route path="payment" element={<PaymentMethod />} />
             <Route path="myorders" element={<OrderView />} />
           </Route>
