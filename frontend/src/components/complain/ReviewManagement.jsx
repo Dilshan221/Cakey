@@ -8,6 +8,10 @@ export default function ReviewManagement() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [ratingFilter, setRatingFilter] = useState("All");
+  const [productFilter, setProductFilter] = useState("All");
 
   // Inline styles
   const sx = {
@@ -77,13 +81,17 @@ export default function ReviewManagement() {
     },
     statH2: { fontSize: 32, color: "#ff6f61", margin: 0 },
     statP: { fontSize: 16, color: "#555", margin: "5px 0 0" },
-    tableWrap: {
-      overflowX: "auto",
-      maxHeight: "600px", // Set max height for vertical scrolling on table
-      overflowY: "auto",
+    tableContainer: {
+      background: "#fff",
       borderRadius: 10,
       boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
-      background: "#fff",
+      overflow: "hidden",
+      marginTop: 20,
+    },
+    tableWrap: {
+      overflowX: "auto",
+      maxHeight: "500px",
+      overflowY: "auto",
     },
     table: {
       width: "100%",
@@ -123,6 +131,64 @@ export default function ReviewManagement() {
       transition: ".3s",
       background: "#27ae60",
     },
+    deleteBtn: {
+      padding: "6px 12px",
+      fontSize: 12,
+      border: "none",
+      borderRadius: 4,
+      cursor: "pointer",
+      color: "#fff",
+      transition: ".3s",
+      background: "#e74c3c",
+    },
+    deleteBtnHover: {
+      background: "#c0392b",
+    },
+    searchContainer: {
+      background: "#fff",
+      padding: 20,
+      borderRadius: 10,
+      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+      marginBottom: 20,
+    },
+    searchRow: {
+      display: "flex",
+      gap: 15,
+      alignItems: "center",
+      flexWrap: "wrap",
+      marginBottom: 15,
+    },
+    searchInput: {
+      flex: 1,
+      minWidth: 250,
+      padding: "10px 15px",
+      border: "1px solid #ddd",
+      borderRadius: 6,
+      fontSize: 14,
+      outline: "none",
+    },
+    filterSelect: {
+      padding: "10px 15px",
+      border: "1px solid #ddd",
+      borderRadius: 6,
+      fontSize: 14,
+      minWidth: 120,
+      outline: "none",
+    },
+    clearBtn: {
+      padding: "10px 15px",
+      border: "none",
+      borderRadius: 6,
+      cursor: "pointer",
+      background: "#6c757d",
+      color: "#fff",
+      fontSize: 14,
+    },
+    resultsCount: {
+      fontSize: 14,
+      color: "#666",
+      fontStyle: "italic",
+    },
     error: {
       background: "#fdecea",
       color: "#c0392b",
@@ -152,15 +218,50 @@ export default function ReviewManagement() {
     loadAll();
   }, []);
 
+  // Filter and search logic
+  const filteredReviews = useMemo(() => {
+    return reviews.filter((review) => {
+      // Search filter
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || 
+        review.name.toLowerCase().includes(searchLower) ||
+        review.email.toLowerCase().includes(searchLower) ||
+        review.product.toLowerCase().includes(searchLower) ||
+        review.review.toLowerCase().includes(searchLower);
+      
+      // Status filter
+      const matchesStatus = statusFilter === "All" || review.status === statusFilter;
+      
+      // Rating filter
+      const matchesRating = ratingFilter === "All" || 
+        (ratingFilter === "5" && review.rating === 5) ||
+        (ratingFilter === "4+" && review.rating >= 4) ||
+        (ratingFilter === "3+" && review.rating >= 3) ||
+        (ratingFilter === "2+" && review.rating >= 2) ||
+        (ratingFilter === "1+" && review.rating >= 1);
+      
+      // Product filter
+      const matchesProduct = productFilter === "All" || review.product === productFilter;
+      
+      return matchesSearch && matchesStatus && matchesRating && matchesProduct;
+    });
+  }, [reviews, searchTerm, statusFilter, ratingFilter, productFilter]);
+
+  // Get unique products for filter dropdown
+  const uniqueProducts = useMemo(() => {
+    const products = reviews.map(r => r.product).filter(Boolean);
+    return [...new Set(products)].sort();
+  }, [reviews]);
+
   const reviewStats = useMemo(() => {
-    if (!reviews || !Array.isArray(reviews)) {
+    if (!filteredReviews || !Array.isArray(filteredReviews)) {
       return { total: 0, pending: 0, solved: 0 };
     }
-    const total = reviews.length;
-    const pending = reviews.filter((r) => r.status === "Pending").length;
-    const solved = reviews.filter((r) => r.status === "Solved").length;
+    const total = filteredReviews.length;
+    const pending = filteredReviews.filter((r) => r.status === "Pending").length;
+    const solved = filteredReviews.filter((r) => r.status === "Solved").length;
     return { total, pending, solved };
-  }, [reviews]);
+  }, [filteredReviews]);
 
   async function handleReviewStatusChange(id, status) {
     try {
@@ -171,6 +272,28 @@ export default function ReviewManagement() {
     } catch (e) {
       alert(e.message || "Failed to update review status");
     }
+  }
+
+  async function handleDeleteReview(id, reviewerName) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the review by ${reviewerName}? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await ReviewsAPI.delete(id);
+      setReviews((prev) => prev.filter((r) => r._id !== id));
+      alert("Review deleted successfully");
+    } catch (e) {
+      alert(e.message || "Failed to delete review");
+    }
+  }
+
+  function clearFilters() {
+    setSearchTerm("");
+    setStatusFilter("All");
+    setRatingFilter("All");
+    setProductFilter("All");
   }
 
   return (
@@ -198,15 +321,76 @@ export default function ReviewManagement() {
         <h1 style={sx.mainH1}>Admin Dashboard</h1>
 
         {error && <div style={sx.error}>{error}</div>}
-        {loading && <div>Loading...</div>}
+        
+        {/* Search and Filters */}
+        <div style={sx.searchContainer}>
+          <div style={sx.searchRow}>
+            <input
+              type="text"
+              placeholder="Search reviews by name, email, product, or review text..."
+              style={sx.searchInput}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button style={sx.btn} onClick={loadAll} disabled={loading}>
+              {loading ? "Loading..." : "Reload"}
+            </button>
+          </div>
+          
+          <div style={sx.searchRow}>
+            <select
+              style={sx.filterSelect}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="All">All Status</option>
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            
+            <select
+              style={sx.filterSelect}
+              value={ratingFilter}
+              onChange={(e) => setRatingFilter(e.target.value)}
+            >
+              <option value="All">All Ratings</option>
+              <option value="5">5 Stars</option>
+              <option value="4+">4+ Stars</option>
+              <option value="3+">3+ Stars</option>
+              <option value="2+">2+ Stars</option>
+              <option value="1+">1+ Stars</option>
+            </select>
+            
+            <select
+              style={sx.filterSelect}
+              value={productFilter}
+              onChange={(e) => setProductFilter(e.target.value)}
+            >
+              <option value="All">All Products</option>
+              {uniqueProducts.map((product) => (
+                <option key={product} value={product}>
+                  {product}
+                </option>
+              ))}
+            </select>
+            
+            <button style={sx.clearBtn} onClick={clearFilters}>
+              Clear Filters
+            </button>
+          </div>
+          
+          <div style={sx.resultsCount}>
+            Showing {filteredReviews.length} of {reviews.length} reviews
+          </div>
+        </div>
 
         {/* Reviews Section */}
         <section id="reviews" style={sx.section}>
           <div style={sx.sectionHeader}>
             <h2>Customer Reviews</h2>
-            <button style={sx.btn} onClick={loadAll} disabled={loading}>
-              Reload
-            </button>
           </div>
 
           {/* Stats */}
@@ -226,8 +410,9 @@ export default function ReviewManagement() {
           </div>
 
           {/* Table */}
-          <div style={sx.tableWrap}>
-            <table style={sx.table}>
+          <div style={sx.tableContainer}>
+            <div style={sx.tableWrap}>
+              <table style={sx.table}>
               <thead style={sx.thead}>
                 <tr>
                   <th style={sx.thtd}>Reviewer</th>
@@ -236,10 +421,11 @@ export default function ReviewManagement() {
                   <th style={sx.thtd}>Rating</th>
                   <th style={sx.thtd}>Review</th>
                   <th style={sx.thtd}>Status</th>
+                  <th style={sx.thtd}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {(reviews || []).map((r) => (
+                {(filteredReviews || []).map((r) => (
                   <tr key={r._id}>
                     <td style={sx.thtd}>{r.name}</td>
                     <td style={sx.thtd}>{r.email}</td>
@@ -266,17 +452,32 @@ export default function ReviewManagement() {
                         ))}
                       </select>
                     </td>
+                    <td style={sx.thtd}>
+                      <button
+                        style={sx.deleteBtn}
+                        onClick={() => handleDeleteReview(r._id, r.name)}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = sx.deleteBtnHover.background;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = sx.deleteBtn.background;
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
-                {(!reviews || reviews.length === 0) && !loading && (
+                {(!filteredReviews || filteredReviews.length === 0) && !loading && (
                   <tr>
-                    <td style={sx.thtd} colSpan={6}>
+                    <td style={sx.thtd} colSpan={7}>
                       No reviews found.
                     </td>
                   </tr>
                 )}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         </section>
       </div>

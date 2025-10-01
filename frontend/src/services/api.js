@@ -411,6 +411,7 @@ export const ReviewsAPI = {
       body: { status },
     }),
   remove: (id) => apiService.request(`/reviews/${id}`, { method: "DELETE" }),
+  delete: (id) => apiService.request(`/reviews/${id}`, { method: "DELETE" }),
 };
 
 
@@ -424,7 +425,7 @@ export const ComplaintsAPI = {
   update: (id, payload) =>
     apiService.request(`/complaints/${id}`, { method: "PUT", body: payload }),
   updateStatus: (id, status) =>
-    apiService.request(`/complaints/${id}`, {
+    apiService.request(`/complaints/${id}/status`, {
       method: "PATCH",
       body: { status },
     }),
@@ -434,6 +435,7 @@ export const ComplaintsAPI = {
       body: { message, by },
     }),
   remove: (id) => apiService.request(`/complaints/${id}`, { method: "DELETE" }),
+  delete: (id) => apiService.request(`/complaints/${id}`, { method: "DELETE" }),
 };
 
 /* ---------------- Convenience re-exports for user admin ---------------- */

@@ -9,6 +9,10 @@ export default function ComplaintManagement() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
 
   const sx = {
     container: {
@@ -30,7 +34,13 @@ export default function ComplaintManagement() {
       fontWeight: 500,
     },
     navLinkActive: { background: "#ff6f61", color: "#fff" },
-    main: { flex: 1, padding: 30, overflowY: "auto" },
+    main: { 
+      flex: 1, 
+      padding: 30, 
+      overflowY: "auto", 
+      maxHeight: "100vh", 
+      boxSizing: "border-box" 
+    },
     mainH1: { fontSize: 28, marginBottom: 20, color: "#e74c3c" },
     stats: { display: "flex", gap: 20, marginBottom: 25, flexWrap: "wrap" },
     statCard: {
@@ -44,7 +54,18 @@ export default function ComplaintManagement() {
     },
     statH2: { fontSize: 32, color: "#ff6f61", margin: 0 },
     statP: { fontSize: 16, color: "#555" },
-    tableWrap: { overflowX: "auto", maxHeight: "600px", overflowY: "auto" },
+    tableContainer: {
+      background: "#fff",
+      borderRadius: 10,
+      boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
+      overflow: "hidden",
+      marginTop: 20,
+    },
+    tableWrap: {
+      overflowX: "auto",
+      maxHeight: "500px",
+      overflowY: "auto",
+    },
     table: { width: "100%", borderCollapse: "collapse" },
     thead: { background: "#ff6f61", color: "#fff" },
     thtd: {
@@ -79,6 +100,64 @@ export default function ComplaintManagement() {
       background: "#27ae60",
       color: "#fff",
     },
+    deleteBtn: {
+      padding: "6px 12px",
+      fontSize: 12,
+      border: "none",
+      borderRadius: 4,
+      cursor: "pointer",
+      color: "#fff",
+      transition: ".3s",
+      background: "#e74c3c",
+    },
+    deleteBtnHover: {
+      background: "#c0392b",
+    },
+    searchContainer: {
+      background: "#fff",
+      padding: 20,
+      borderRadius: 10,
+      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+      marginBottom: 20,
+    },
+    searchRow: {
+      display: "flex",
+      gap: 15,
+      alignItems: "center",
+      flexWrap: "wrap",
+      marginBottom: 15,
+    },
+    searchInput: {
+      flex: 1,
+      minWidth: 250,
+      padding: "10px 15px",
+      border: "1px solid #ddd",
+      borderRadius: 6,
+      fontSize: 14,
+      outline: "none",
+    },
+    filterSelect: {
+      padding: "10px 15px",
+      border: "1px solid #ddd",
+      borderRadius: 6,
+      fontSize: 14,
+      minWidth: 120,
+      outline: "none",
+    },
+    clearBtn: {
+      padding: "10px 15px",
+      border: "none",
+      borderRadius: 6,
+      cursor: "pointer",
+      background: "#6c757d",
+      color: "#fff",
+      fontSize: 14,
+    },
+    resultsCount: {
+      fontSize: 14,
+      color: "#666",
+      fontStyle: "italic",
+    },
     error: {
       background: "#fdecea",
       color: "#c0392b",
@@ -103,27 +182,84 @@ export default function ComplaintManagement() {
     loadAll();
   }, []);
 
+  // Filter and search logic
+  const filteredComplaints = useMemo(() => {
+    return complaints.filter((complaint) => {
+      // Search filter
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || 
+        complaint.name.toLowerCase().includes(searchLower) ||
+        complaint.email.toLowerCase().includes(searchLower) ||
+        complaint.complaint.toLowerCase().includes(searchLower) ||
+        complaint.phone.includes(searchTerm);
+      
+      // Status filter
+      const matchesStatus = statusFilter === "All" || complaint.status === statusFilter;
+      
+      // Priority filter
+      const matchesPriority = priorityFilter === "All" || complaint.priority === priorityFilter;
+      
+      // Type filter
+      const matchesType = typeFilter === "All" || complaint.complaintType === typeFilter;
+      
+      return matchesSearch && matchesStatus && matchesPriority && matchesType;
+    });
+  }, [complaints, searchTerm, statusFilter, priorityFilter, typeFilter]);
+
   const stats = useMemo(() => {
-    const total = complaints.length;
-    const pending = complaints.filter((c) => c.status === "Pending").length;
-    const solved = complaints.filter((c) => c.status === "Solved").length;
-    const high = complaints.filter((c) => c.priority === "High").length;
+    const total = filteredComplaints.length;
+    const pending = filteredComplaints.filter((c) => c.status === "Pending").length;
+    const solved = filteredComplaints.filter((c) => c.status === "Solved").length;
+    const high = filteredComplaints.filter((c) => c.priority === "High").length;
     return { total, pending, solved, high };
-  }, [complaints]);
+  }, [filteredComplaints]);
 
   async function handleStatusChange(id, status) {
-    await ComplaintsAPI.updateStatus(id, status);
-    setComplaints((prev) =>
-      prev.map((c) => (c._id === id ? { ...c, status } : c))
-    );
+    try {
+      await ComplaintsAPI.updateStatus(id, status);
+      setComplaints((prev) =>
+        prev.map((c) => (c._id === id ? { ...c, status } : c))
+      );
+    } catch (e) {
+      alert(e.message || "Failed to update complaint status");
+    }
   }
 
   async function handlePriorityChange(id, priority) {
-    await ComplaintsAPI.update(id, { priority });
-    setComplaints((prev) =>
-      prev.map((c) => (c._id === id ? { ...c, priority } : c))
-    );
+    try {
+      const current = complaints.find((c) => c._id === id);
+      await ComplaintsAPI.update(id, { ...current, priority });
+      setComplaints((prev) =>
+        prev.map((c) => (c._id === id ? { ...c, priority } : c))
+      );
+    } catch (e) {
+      alert(e.message || "Failed to update complaint priority");
+    }
   }
+
+  async function handleDeleteComplaint(id, complainerName) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the complaint by ${complainerName}? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await ComplaintsAPI.delete(id);
+      setComplaints((prev) => prev.filter((c) => c._id !== id));
+      alert("Complaint deleted successfully");
+    } catch (e) {
+      alert(e.message || "Failed to delete complaint");
+    }
+  }
+
+  function clearFilters() {
+    setSearchTerm("");
+    setStatusFilter("All");
+    setPriorityFilter("All");
+    setTypeFilter("All");
+  }
+
+  const COMPLAINT_TYPES = ["Product Quality", "Customer Service", "Delivery Issue", "Billing Problem"];
 
   return (
     <div style={sx.container}>
@@ -149,9 +285,71 @@ export default function ComplaintManagement() {
       <div style={sx.main}>
         <h1 style={sx.mainH1}>Complaint Management</h1>
         {error && <div style={sx.error}>{error}</div>}
-        <button style={sx.btn} onClick={loadAll} disabled={loading}>
-          {loading ? "Loading..." : "Reload"}
-        </button>
+        
+        {/* Search and Filters */}
+        <div style={sx.searchContainer}>
+          <div style={sx.searchRow}>
+            <input
+              type="text"
+              placeholder="Search complaints by name, email, phone, or complaint text..."
+              style={sx.searchInput}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button style={sx.btn} onClick={loadAll} disabled={loading}>
+              {loading ? "Loading..." : "Reload"}
+            </button>
+          </div>
+          
+          <div style={sx.searchRow}>
+            <select
+              style={sx.filterSelect}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="All">All Status</option>
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            
+            <select
+              style={sx.filterSelect}
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            >
+              <option value="All">All Priority</option>
+              {PRIORITY_OPTIONS.map((priority) => (
+                <option key={priority} value={priority}>
+                  {priority}
+                </option>
+              ))}
+            </select>
+            
+            <select
+              style={sx.filterSelect}
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+            >
+              <option value="All">All Types</option>
+              {COMPLAINT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+            
+            <button style={sx.clearBtn} onClick={clearFilters}>
+              Clear Filters
+            </button>
+          </div>
+          
+          <div style={sx.resultsCount}>
+            Showing {filteredComplaints.length} of {complaints.length} complaints
+          </div>
+        </div>
 
         {/* Stats */}
         <div style={sx.stats}>
@@ -174,8 +372,9 @@ export default function ComplaintManagement() {
         </div>
 
         {/* Table */}
-        <div style={sx.tableWrap}>
-          <table style={sx.table}>
+        <div style={sx.tableContainer}>
+          <div style={sx.tableWrap}>
+            <table style={sx.table}>
             <thead style={sx.thead}>
               <tr>
                 <th style={sx.thtd}>Name</th>
@@ -183,10 +382,11 @@ export default function ComplaintManagement() {
                 <th style={sx.thtd}>Complaint</th>
                 <th style={sx.thtd}>Priority</th>
                 <th style={sx.thtd}>Status</th>
+                <th style={sx.thtd}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {(complaints || []).map((c) => (
+              {(filteredComplaints || []).map((c) => (
                 <tr key={c._id}>
                   <td style={sx.thtd}>{c.name}</td>
                   <td style={sx.thtd}>{c.email}</td>
@@ -233,17 +433,32 @@ export default function ComplaintManagement() {
                       ))}
                     </select>
                   </td>
+                  <td style={sx.thtd}>
+                    <button
+                      style={sx.deleteBtn}
+                      onClick={() => handleDeleteComplaint(c._id, c.name)}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = sx.deleteBtnHover.background;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = sx.deleteBtn.background;
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {(!complaints || complaints.length === 0) && (
+              {(!filteredComplaints || filteredComplaints.length === 0) && !loading && (
                 <tr>
-                  <td style={sx.thtd} colSpan={5}>
+                  <td style={sx.thtd} colSpan={6}>
                     No complaints found.
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </div>
     </div>
