@@ -30,7 +30,7 @@ import RegisterUser from "./pages/registerhome";
 import Order from "./pages/OrderPage";
 import PaymentMethod from "./pages/PaymentMethod";
 import OrderView from "./pages/OrderView";
-import ComplaintPage from "./pages/contact";
+import ComplaintPage from "./pages/contact"; // keep if you reuse Contact for complaints
 
 /* ---------- Auth ---------- */
 import Signup from "./components/user/signup";
@@ -49,9 +49,11 @@ import AdminManager from "./components/user/AdminTable";
 import UserAdminDashboard from "./components/user/Admindashboard";
 import UserSidebar from "./components/user/Sidebar";
 
-/* ---------- Product pages ---------- */
-import ProductDashboard from "./components/product/addproduct";
+/* ---------- Product pages (UPDATED PATHS) ---------- */
+import ProductDashboard from "./components/product/ProductDashboard";
 import ProductForm from "./components/product/productform";
+import Reports from "./components/product/Reports";
+import Search from "./components/product/Search";
 
 /* ---------- Payments & Salaries ---------- */
 import PaymentNew from "./components/admin/PaymentNew";
@@ -157,6 +159,9 @@ export default function App() {
             <Route path="dashboard" element={<ProductDashboard />} />
             <Route path="form" element={<ProductForm />} />
             <Route path="from" element={<Navigate to="form" replace />} />
+            {/* ✅ make children RELATIVE, not absolute */}
+            <Route path="reports" element={<Reports />} />
+            <Route path="search" element={<Search />} />
           </Route>
         </Route>
 
@@ -208,7 +213,7 @@ export default function App() {
             <Route path="menu" element={<Menu />} />
             <Route path="services" element={<Services />} />
 
-            {/* ✅ Public complaints page */}
+            {/* Public complaints page (currently same component as Contact) */}
             <Route path="complaints" element={<ComplaintPage />} />
 
             {/* Product details / checkout */}
