@@ -1,4 +1,6 @@
 // src/services/api.js
+
+/* ---------------------------------- Env ---------------------------------- */
 const ENV =
   (typeof import.meta !== "undefined" && import.meta.env) || process.env;
 
@@ -9,6 +11,7 @@ export const API_BASE_URL =
   ENV?.REACT_APP_API_URL ||
   "http://localhost:8000/api";
 
+/* ------------------------------- Utilities ------------------------------- */
 const qs = (obj = {}) => {
   const params = new URLSearchParams();
   Object.entries(obj).forEach(([k, v]) => {
@@ -33,6 +36,7 @@ const resolveUrl = (base, endpoint) => {
   return base + endpoint;
 };
 
+/* ------------------------------ Auth storage ----------------------------- */
 const authStore = {
   getToken() {
     return localStorage.getItem("cb_token");
@@ -54,6 +58,7 @@ const authStore = {
   },
 };
 
+/* ------------------------------- HTTP client ----------------------------- */
 let AUTH_TOKEN = null;
 
 export const apiService = {
@@ -71,8 +76,8 @@ export const apiService = {
     let timer = null;
     if (controller) timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const initialHeaders = options.headers || {};
     const usingFormData = isFormData(options.body);
+    const initialHeaders = options.headers || {};
 
     const headers = {
       ...(usingFormData ? {} : { "Content-Type": "application/json" }),
@@ -88,6 +93,7 @@ export const apiService = {
       ...options,
     };
 
+    // Serialize JS object bodies (but not FormData / strings / Blobs)
     if (cfg.body && !usingFormData && typeof cfg.body === "object") {
       cfg.body = JSON.stringify(cfg.body);
     }
@@ -95,24 +101,55 @@ export const apiService = {
     try {
       const res = await fetch(url, cfg);
 
+      // Non-2xx → try to parse error body
       if (!res.ok) {
-        let errorData = null;
+        let errorPayload = null;
+        let textPreview = null;
         try {
-          errorData = await res.json();
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) {
+            errorPayload = await res.json();
+          } else {
+            const text = await res.text();
+            textPreview = text?.slice(0, 500);
+          }
         } catch {}
+
+        // Helpful message for HTML (often causes "Unexpected token '<'")
+        const htmlHint =
+          textPreview && textPreview.trim().startsWith("<")
+            ? " (Server returned HTML; check the API base URL / route.)"
+            : "";
+
         const err = new Error(
-          (errorData && (errorData.error || errorData.message)) ||
-            `HTTP error: ${res.status} ${res.statusText}`
+          (errorPayload && (errorPayload.error || errorPayload.message)) ||
+            `HTTP error: ${res.status} ${res.statusText}${htmlHint}`
         );
         err.response = res;
-        err.data = errorData;
+        err.data = errorPayload ?? { preview: textPreview };
         throw err;
       }
 
+      // 204 No Content
       if (res.status === 204) return null;
 
+      // Content negotiation
       const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) return await res.json();
+      if (contentType.includes("application/json")) {
+        // Guard against invalid JSON throwing Unexpected token '<'
+        try {
+          return await res.json();
+        } catch (e) {
+          const text = await res.text().catch(() => "");
+          const htmlHint = text?.trim().startsWith("<")
+            ? "Server responded with HTML instead of JSON. Check that the API endpoint is correct."
+            : "Response could not be parsed as JSON.";
+          const err = new Error(`Bad JSON response. ${htmlHint}`);
+          err.cause = e;
+          err.preview = text.slice(0, 500);
+          throw err;
+        }
+      }
       if (contentType.includes("text/")) return await res.text();
       return await res.blob();
     } catch (error) {
@@ -137,12 +174,12 @@ export const apiService = {
     }
   },
 
-  /* Health */
+  /* ------------------------------- Health -------------------------------- */
   testConnection() {
     return this.request("/health");
   },
 
-  /* Auth */
+  /* -------------------------------- Auth --------------------------------- */
   async login(credentials) {
     const data = await this.request("/usermanagement/login", {
       method: "POST",
@@ -159,7 +196,7 @@ export const apiService = {
     return authStore.currentUser();
   },
 
-  /* Products */
+  /* ------------------------------ Products ------------------------------- */
   listProducts(query = {}) {
     return this.request(`/products${qs(query)}`);
   },
@@ -175,8 +212,11 @@ export const apiService = {
   deleteProduct(id) {
     return this.request(`/products/${id}`, { method: "DELETE" });
   },
+  listProductCategories() {
+    return this.request(`/products/categories`);
+  },
 
-  /* Employees */
+  /* ------------------------------ Employees ------------------------------ */
   listEmployees(query = {}) {
     return this.request(`/employees${qs(query)}`);
   },
@@ -193,12 +233,12 @@ export const apiService = {
     return this.request(`/employees/${id}`, { method: "DELETE" });
   },
 
-  /* Attendance */
+  /* ------------------------------ Attendance ----------------------------- */
   listAttendance(query = {}) {
     return this.request(`/attendance${qs(query)}`);
   },
 
-  /* Payments */
+  /* ------------------------------- Payments ------------------------------ */
   listPayments(query = {}) {
     return this.request(`/payments${qs(query)}`);
   },
@@ -212,7 +252,7 @@ export const apiService = {
     return this.request(`/payments/${id}`, { method: "DELETE" });
   },
 
-  /* Users */
+  /* -------------------------------- Users -------------------------------- */
   getUsers(query = {}) {
     return this.request(`/user${qs(query)}`);
   },
@@ -229,7 +269,7 @@ export const apiService = {
     return this.request(`/user/${id}`, { method: "DELETE" });
   },
 
-  /* Salaries */
+  /* -------------------------------- Salaries ----------------------------- */
   listSalaryRecords(query = {}) {
     return this.request(`/salaries${qs(query)}`);
   },
@@ -237,12 +277,11 @@ export const apiService = {
     return this.request(`/salaries`, { method: "POST", body: payload });
   },
 
-  /* Orders (delivery) */
+  /* ----------------------------- Orders (Delivery) ----------------------- */
   listOrders(query = {}) {
     return this.request(`/delivery/orders${qs(query)}`);
   },
   createOrder(body) {
-    // keep your core endpoint for now
     return this.request("/order/create", { method: "POST", body });
   },
   updateOrderStatus(orderId, status) {
@@ -255,7 +294,7 @@ export const apiService = {
     return this.request(`/delivery/orders/${orderId}`, { method: "DELETE" });
   },
 
-  /* Custom Orders */
+  /* ----------------------------- Custom Orders --------------------------- */
   createCustomOrder(payload) {
     const hasFile =
       typeof File !== "undefined" && payload?.designImage instanceof File;
@@ -289,6 +328,7 @@ export const apiService = {
   },
 };
 
+/* ---------------------------- Extra exports ----------------------------- */
 export const ReviewsAPI = {
   list: (query = {}) => apiService.request(`/reviews${qs(query)}`),
   get: (id) => apiService.request(`/reviews/${id}`),
