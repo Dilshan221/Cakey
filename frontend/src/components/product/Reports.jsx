@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import apiService from "../../services/api";
 
@@ -7,6 +7,8 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [reportType, setReportType] = useState("inventory"); // inventory | pricing | stock
   const [error, setError] = useState("");
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const reportRef = useRef(null);
 
   // Fetch products via apiService
   const fetchProducts = async () => {
@@ -17,6 +19,7 @@ const Reports = () => {
       setProducts(Array.isArray(data) ? data : data?.items || []);
     } catch (e) {
       setError(e?.data?.message || e?.message || "Failed to fetch products");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -26,54 +29,9 @@ const Reports = () => {
     fetchProducts();
   }, []);
 
-  // Precomputed stats
-  const stats = useMemo(() => {
-    if (!products.length) {
-      return {
-        totalProducts: 0,
-        totalValue: 0,
-        totalQuantity: 0,
-        averagePrice: 0,
-        lowStockProducts: 0,
-        outOfStockProducts: 0,
-        highestPriceProduct: null,
-        lowestPriceProduct: null,
-      };
-    }
-
-    const totalProducts = products.length;
-    const totalValue = products.reduce(
-      (sum, p) =>
-        sum + Number(p.price || 0) * Number(p.quantity ?? p.stock ?? 0),
-      0
-    );
-    const totalQuantity = products.reduce(
-      (sum, p) => sum + Number(p.quantity ?? p.stock ?? 0),
-      0
-    );
-    const averagePrice = totalQuantity ? totalValue / totalQuantity : 0;
-
-    const qty = (p) => Number(p.quantity ?? p.stock ?? 0);
-    const lowStockProducts = products.filter((p) => qty(p) < 10).length;
-    const outOfStockProducts = products.filter((p) => qty(p) === 0).length;
-
-    const byPriceDesc = [...products].sort(
-      (a, b) => Number(b.price || 0) - Number(a.price || 0)
-    );
-    const highestPriceProduct = byPriceDesc[0] ?? null;
-    const lowestPriceProduct = byPriceDesc[byPriceDesc.length - 1] ?? null;
-
-    return {
-      totalProducts,
-      totalValue,
-      totalQuantity,
-      averagePrice,
-      lowStockProducts,
-      outOfStockProducts,
-      highestPriceProduct,
-      lowestPriceProduct,
-    };
-  }, [products]);
+  // Helpers
+  const qtyOf = (p) => Number(p.quantity ?? p.stock ?? 0);
+  const priceOf = (p) => Number(p.price || 0);
 
   const getStockStatus = (quantity) => {
     if (quantity === 0) return "out-of-stock";
@@ -92,6 +50,49 @@ const Reports = () => {
     if (price < 5000) return "Standard";
     return "Premium";
   };
+
+  const stats = useMemo(() => {
+    if (!products.length) {
+      return {
+        totalProducts: 0,
+        totalValue: 0,
+        totalQuantity: 0,
+        averagePrice: 0,
+        lowStockProducts: 0,
+        outOfStockProducts: 0,
+        highestPriceProduct: null,
+        lowestPriceProduct: null,
+      };
+    }
+
+    const totalProducts = products.length;
+    const totalValue = products.reduce(
+      (sum, p) => sum + priceOf(p) * qtyOf(p),
+      0
+    );
+    const totalQuantity = products.reduce((sum, p) => sum + qtyOf(p), 0);
+    const averagePrice = totalQuantity ? totalValue / totalQuantity : 0;
+
+    const lowStockProducts = products.filter((p) => qtyOf(p) < 10).length;
+    const outOfStockProducts = products.filter((p) => qtyOf(p) === 0).length;
+
+    const byPriceDesc = [...products].sort((a, b) => priceOf(b) - priceOf(a));
+    const highestPriceProduct = byPriceDesc[0] ?? null;
+    const lowestPriceProduct = byPriceDesc[byPriceDesc.length - 1] ?? null;
+
+    return {
+      totalProducts,
+      totalValue,
+      totalQuantity,
+      averagePrice,
+      lowStockProducts,
+      outOfStockProducts,
+      highestPriceProduct,
+      lowestPriceProduct,
+    };
+  }, [products]);
+
+  // ======== Reports (UI) ========
 
   const InventoryReport = () => (
     <div className="report-section">
@@ -129,17 +130,17 @@ const Reports = () => {
           </thead>
           <tbody>
             {products.map((p) => {
-              const qty = Number(p.quantity ?? p.stock ?? 0);
-              const price = Number(p.price || 0);
+              const q = qtyOf(p);
+              const pr = priceOf(p);
               return (
                 <tr key={p._id || p.id}>
                   <td>{p.name}</td>
-                  <td className={qty < 5 ? "low-stock" : ""}>{qty}</td>
-                  <td>{price.toLocaleString()}</td>
-                  <td>Rs. {(price * qty).toLocaleString()}</td>
+                  <td className={q < 5 ? "low-stock" : ""}>{q}</td>
+                  <td>{pr.toLocaleString()}</td>
+                  <td>Rs. {(pr * q).toLocaleString()}</td>
                   <td>
-                    <span className={`status ${getStockStatus(qty)}`}>
-                      {getStockStatusText(qty)}
+                    <span className={`status ${getStockStatus(q)}`}>
+                      {getStockStatusText(q)}
                     </span>
                   </td>
                 </tr>
@@ -196,17 +197,17 @@ const Reports = () => {
           </thead>
           <tbody>
             {[...products]
-              .sort((a, b) => Number(b.price || 0) - Number(a.price || 0))
+              .sort((a, b) => priceOf(b) - priceOf(a))
               .map((p) => {
-                const price = Number(p.price || 0);
-                const qty = Number(p.quantity ?? p.stock ?? 0);
+                const pr = priceOf(p);
+                const q = qtyOf(p);
                 return (
                   <tr key={p._id || p.id}>
                     <td>{p.name}</td>
-                    <td className="price-cell">{price.toLocaleString()}</td>
-                    <td>{qty}</td>
-                    <td>{getProductCategory(price)}</td>
-                    <td>Rs. {price.toFixed(2)}</td>
+                    <td className="price-cell">{pr.toLocaleString()}</td>
+                    <td>{q}</td>
+                    <td>{getProductCategory(pr)}</td>
+                    <td>Rs. {pr.toFixed(2)}</td>
                   </tr>
                 );
               })}
@@ -217,10 +218,9 @@ const Reports = () => {
   );
 
   const StockReport = () => {
-    const qty = (p) => Number(p.quantity ?? p.stock ?? 0);
-    const low = products.filter((p) => qty(p) < 10 && qty(p) > 0);
-    const out = products.filter((p) => qty(p) === 0);
-    const ok = products.filter((p) => qty(p) >= 10);
+    const low = products.filter((p) => qtyOf(p) < 10 && qtyOf(p) > 0);
+    const out = products.filter((p) => qtyOf(p) === 0);
+    const ok = products.filter((p) => qtyOf(p) >= 10);
 
     return (
       <div className="report-section">
@@ -248,7 +248,7 @@ const Reports = () => {
               <ul>
                 {low.map((p) => (
                   <li key={p._id || p.id}>
-                    <strong>{p.name}</strong> — Only {qty(p)} left (Reorder)
+                    <strong>{p.name}</strong> — Only {qtyOf(p)} left (Reorder)
                   </li>
                 ))}
               </ul>
@@ -263,7 +263,7 @@ const Reports = () => {
               <ul>
                 {ok.map((p) => (
                   <li key={p._id || p.id}>
-                    <strong>{p.name}</strong> — {qty(p)} in stock
+                    <strong>{p.name}</strong> — {qtyOf(p)} in stock
                   </li>
                 ))}
               </ul>
@@ -276,6 +276,83 @@ const Reports = () => {
     );
   };
 
+  // ======== Print-to-PDF (no libraries) ========
+  const handleDownloadPDF = () => {
+    if (!reportRef.current) return;
+    setIsGeneratingPDF(true);
+
+    try {
+      const printContents = reportRef.current.innerHTML;
+
+      // Collect styles so the printout matches on-screen
+      const styleTags = Array.from(
+        document.querySelectorAll("style, link[rel='stylesheet']")
+      )
+        .map((el) => el.outerHTML)
+        .join("\n");
+
+      const printHtml = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cake & Bake - Product Analytics Report</title>
+    ${styleTags}
+    <style>
+      /* Force white background and A4-friendly layout */
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sidebar { display: none !important; }
+      .main { margin: 0 !important; }
+      .report-footer { page-break-after: always; }
+      /* optional: prevent tables from breaking awkwardly */
+      table { page-break-inside:auto }
+      tr { page-break-inside:avoid; page-break-after:auto }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+    </style>
+  </head>
+  <body>
+    <div class="print-wrapper">
+      ${printContents}
+    </div>
+    <script>
+      window.onload = function() {
+        window.focus();
+        window.print();
+        setTimeout(() => window.close(), 300);
+      };
+    </script>
+  </body>
+</html>`;
+
+      const blob = new Blob([printHtml], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+
+      // Use an iframe (safer than window.open popup blockers)
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+
+      // Cleanup after print window closes
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(iframe);
+        setIsGeneratingPDF(false);
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setIsGeneratingPDF(false);
+      alert("Couldn't generate the PDF. Try again.");
+    }
+  };
+
   return (
     <div>
       {/* Sidebar */}
@@ -285,10 +362,7 @@ const Reports = () => {
         </div>
         <nav>
           <Link to="/cadmin/product/dashboard">Dashboard</Link>
-
-          <Link to="/cadmin/product/form" >
-            Products
-          </Link>
+          <Link to="/cadmin/product/form">Products</Link>
           <Link to="/cadmin/product/reports" className="active">
             Reports
           </Link>
@@ -331,6 +405,16 @@ const Reports = () => {
               >
                 ⚠️ Stock Alerts
               </button>
+
+              {/* Download PDF */}
+              <button
+                className="download-btn"
+                onClick={handleDownloadPDF}
+                disabled={isGeneratingPDF || loading || products.length === 0}
+                title="Opens print dialog — choose 'Save as PDF'"
+              >
+                {isGeneratingPDF ? "🔄 Generating…" : "📄 Download PDF"}
+              </button>
             </div>
           </div>
 
@@ -343,12 +427,12 @@ const Reports = () => {
               <h3>No Products Found</h3>
               <p>
                 There are no products in the system.{" "}
-                <Link to="/form">Add your first product</Link> to generate
-                reports.
+                <Link to="/cadmin/product/form">Add your first product</Link> to
+                generate reports.
               </p>
             </div>
           ) : (
-            <div className="report-content">
+            <div className="report-content" ref={reportRef}>
               {/* Summary Cards */}
               <div className="summary-cards">
                 <div className="summary-card total">
@@ -378,6 +462,7 @@ const Reports = () => {
               <div className="report-footer">
                 <p>Report generated on: {new Date().toLocaleString()}</p>
                 <p>Total products in system: {stats.totalProducts}</p>
+                <p className="pdf-watermark">Cake & Bake Management System</p>
               </div>
             </div>
           )}
@@ -402,10 +487,14 @@ const Reports = () => {
         .header-section h1 { font-size:28px; margin:0 0 10px; color:#e74c3c; }
         .subtitle { color:#666; }
 
-        .report-selector { display:flex; gap:15px; margin-top:20px; justify-content:center; flex-wrap:wrap; }
+        .report-selector { display:flex; gap:15px; margin-top:20px; justify-content:center; flex-wrap:wrap; align-items:center; }
         .report-btn { padding:12px 20px; border:2px solid #ddd; background:white; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; transition:all .3s; min-width:150px; }
         .report-btn:hover { border-color:#ff6f61; }
         .report-btn.active { background:#ff6f61; color:white; border-color:#ff6f61; }
+
+        .download-btn { padding:12px 20px; border:2px solid #27ae60; background:#27ae60; color:white; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; transition:.3s; min-width:150px; }
+        .download-btn:hover:not(:disabled) { background:#219955; border-color:#219955; }
+        .download-btn:disabled { background:#95a5a6; border-color:#95a5a6; cursor:not-allowed; opacity:.6; }
 
         .summary-cards { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:20px; margin-bottom:30px; }
         .summary-card { background:white; padding:25px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.08); text-align:center; border-left:5px solid #3498db; }
@@ -452,7 +541,7 @@ const Reports = () => {
           .main { margin-left:0; padding:20px; }
           .sidebar { display:none; }
           .report-selector { flex-direction:column; align-items:center; }
-          .report-btn { width:100%; max-width:300px; }
+          .report-btn, .download-btn { width:100%; max-width:300px; }
           .summary-cards { grid-template-columns:1fr; }
           .stats-grid { grid-template-columns:1fr; }
         }
