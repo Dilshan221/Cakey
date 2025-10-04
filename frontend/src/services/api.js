@@ -254,19 +254,19 @@ export const apiService = {
 
   /* -------------------------------- Users -------------------------------- */
   getUsers(query = {}) {
-    return this.request(`/user${qs(query)}`);
+    return this.request(`usermanagement/all${qs(query)}`);
   },
   getUser(id) {
-    return this.request(`/user/${id}`);
+    return this.request(`usermanagement/${id}`);
   },
   createUser(payload) {
-    return this.request("/user", { method: "POST", body: payload });
+    return this.request("usermanagement/register", { method: "POST", body: payload });
   },
   updateUser(id, payload) {
-    return this.request(`/user/${id}`, { method: "PUT", body: payload });
+    return this.request(`usermanagement/${id}`, { method: "PUT", body: payload });
   },
   deleteUser(id) {
-    return this.request(`/user/${id}`, { method: "DELETE" });
+    return this.request(`usermanagement/${id}`, { method: "DELETE" });
   },
 
   /* -------------------------------- Salaries ----------------------------- */

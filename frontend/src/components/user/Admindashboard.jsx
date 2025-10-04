@@ -1,10 +1,11 @@
 // src/components/user/Admindashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate  } from "react-router-dom";
 import { userMgmtAPI } from "../../services/api";
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Hide the global admin header ONLY while this page is mounted
   useEffect(() => {
@@ -581,7 +582,7 @@ export default function AdminDashboard() {
             Complaints
           </NavLink>
           <NavLink
-            to="/useradmin/adminmanager"
+            to="/adminmanager"
             style={({ isActive }) => ({
               ...sx.linkBase,
               ...(isActive ? sx.linkActive : {}),
@@ -624,6 +625,14 @@ export default function AdminDashboard() {
                 + Add User
               </button>
             </div>
+                   <div style={{ marginBottom: 20 }}>
+          <button
+            style={{ ...sx.btn, ...sx.btnSolid }}
+            onClick={() => navigate("/adminmanager")}
+          >
+            Go to Admin Manager
+          </button>
+        </div>
           </div>
 
           {errorMsg && (

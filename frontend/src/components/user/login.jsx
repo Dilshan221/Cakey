@@ -41,52 +41,55 @@ export default function Login() {
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setServerError("");
+const onSubmit = async (e) => {
+  e.preventDefault();
+  setServerError("");
 
-    const { email, password, remember } = form;
-    if (!email || !password)
-      return setServerError("Please fill in all fields.");
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email))
-      return setServerError("Please enter a valid email address.");
+  const { email, password, remember } = form;
+  if (!email || !password)
+    return setServerError("Please fill in all fields.");
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(email))
+    return setServerError("Please enter a valid email address.");
 
-    if (remember) localStorage.setItem("cb_remember_email", email);
-    else localStorage.removeItem("cb_remember_email");
+  if (remember) localStorage.setItem("cb_remember_email", email);
+  else localStorage.removeItem("cb_remember_email");
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const data =
-        typeof apiService.login === "function"
-          ? await apiService.login({ email, password })
-          : await apiService.request("/usermanagement/login", {
-              method: "POST",
-              body: { email, password },
-            });
+    const data =
+      typeof apiService.login === "function"
+        ? await apiService.login({ email, password })
+        : await apiService.request("/usermanagement/login", {
+            method: "POST",
+            body: { email, password },
+          });
 
-      // persist auth via authStorage (keeps everything consistent)
-      if (data?.token) authStorage.setToken(data.token, true);
-      if (data?.user) authStorage.setUser(data.user, true);
-      authStorage.applyToApiService();
+    if (data?.token) authStorage.setToken(data.token, true);
+    if (data?.user) authStorage.setUser(data.user, true);
+    authStorage.applyToApiService();
 
-      const role = String(data?.user?.role || "customer")
-        .trim()
-        .toLowerCase();
-      if (role === "admin") {
-        navigate("/admin?view=attendance", { replace: true });
-      } else {
-        navigate("/", { replace: true }); // Customer -> RegisterHome
-      }
-    } catch (err) {
-      const msg =
-        err?.data?.message || err?.message || "Login failed. Please try again.";
-      setServerError(msg);
-    } finally {
-      setLoading(false);
+    const role = String(data?.user?.role || "customer")
+      .trim()
+      .toLowerCase();
+
+    if (role === "admin") {
+      navigate("/admin?view=attendance", { replace: true });
+    } else if (role === "finance manager") {
+      navigate("/useradmin", { replace: true });
+    } else {
+      navigate("/", { replace: true }); // Customer -> RegisterHome
     }
-  };
+  } catch (err) {
+    const msg =
+      err?.data?.message || err?.message || "Login failed. Please try again.";
+    setServerError(msg);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="cb-login-wrapper">

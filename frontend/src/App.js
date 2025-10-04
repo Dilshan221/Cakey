@@ -48,6 +48,7 @@ import AddAdmin from "./components/user/AdminForm";
 import AdminManager from "./components/user/AdminTable";
 import UserAdminDashboard from "./components/user/Admindashboard";
 import UserSidebar from "./components/user/Sidebar";
+import EditAdmin from "./components/user/EditAdmin";
 
 /* ---------- Product pages (UPDATED PATHS) ---------- */
 import ProductDashboard from "./components/product/ProductDashboard";
@@ -166,15 +167,14 @@ export default function App() {
         </Route>
 
         {/* USER ADMIN (protected) */}
-        <Route element={<RequireAuth />}>
-          <Route path="/useradmin/*" element={<UserAdminShell />}>
-            <Route index element={<UserAdminDashboard />} />
-            <Route path="addadmin" element={<AddAdmin />} />
-            <Route path="adminmanager" element={<AdminManager />} />
-            <Route path="editadmin/:id" element={<AddAdmin />} />
-            <Route path="*" element={<Navigate to="/useradmin" replace />} />
-          </Route>
-        </Route>
+     
+          <Route path="/useradmin" element={<UserAdminDashboard />} />
+          <Route path="/addadmin" element={<AddAdmin />} />
+          <Route path="/adminmanager" element={<AdminManager />} />
+          <Route path="/editadmin/:id" element={<EditAdmin />} />
+          <Route path="*" element={<Navigate to="/useradmin" replace />} />
+          
+     
 
         {/* ORIGINAL ADMIN (now under /cadmin) */}
         <Route element={<RequireAuth />}>
