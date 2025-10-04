@@ -60,6 +60,7 @@ export default function AdminDashboard() {
       padding: 20,
       borderRadius: 12,
       boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
+      
       flex: 1,
       minWidth: 180,
       textAlign: "center",

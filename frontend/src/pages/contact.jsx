@@ -1,4 +1,3 @@
-// src/pages/contact.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ReviewsAPI } from "../services/api";
@@ -8,18 +7,126 @@ const Contact = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+
+  // Validation functions
+  const validateName = (name) => {
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!name.trim()) {
+      return "Name is required";
+    }
+    if (!nameRegex.test(name)) {
+      return "Name should only contain letters and spaces";
+    }
+    if (name.trim().length < 3) {
+      return "Name must be at least 3 characters long";
+    }
+    return "";
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim()) {
+      return "Email is required";
+    }
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address";
+    }
+    return "";
+  };
+
+  const validateProduct = (product) => {
+    if (!product) {
+      return "Please select a product";
+    }
+    return "";
+  };
+
+  const validateRating = (rating) => {
+    if (rating === 0) {
+      return "Please select a rating";
+    }
+    return "";
+  };
+
+  const validateReview = (review) => {
+    if (!review.trim()) {
+      return "Review is required";
+    }
+    if (review.trim().length < 10) {
+      return "Review must be at least 10 characters long";
+    }
+    if (review.trim().length > 500) {
+      return "Review must not exceed 500 characters";
+    }
+    return "";
+  };
+
+  // Handle input changes with real-time validation
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let error = "";
+
+    switch (name) {
+      case "name":
+        error = validateName(value);
+        break;
+      case "email":
+        error = validateEmail(value);
+        break;
+      case "product":
+        error = validateProduct(value);
+        break;
+      case "review":
+        error = validateReview(value);
+        break;
+      default:
+        break;
+    }
+
+    setErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
+  };
+
+  // Handle rating change with validation
+  const handleRatingChange = (star) => {
+    setRating(star);
+    const error = validateRating(star);
+    setErrors(prev => ({
+      ...prev,
+      rating: error
+    }));
+    console.log("⭐ Rating set to:", star);
+  };
 
   const submitReview = async (e) => {
     e.preventDefault();
     
-    // Debug: Log to verify function is called
     console.log("🔍 Submit button clicked!");
     console.log("Current rating:", rating);
 
-    // Validate rating first
-    if (rating === 0) {
-      setMessage("⚠️ Please select a rating before submitting");
+    // Collect form data
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Validate all fields before submission
+    const validationErrors = {
+      name: validateName(data.name),
+      email: validateEmail(data.email),
+      product: validateProduct(data.product),
+      rating: validateRating(rating),
+      review: validateReview(data.review)
+    };
+
+    // Check if there are any errors
+    const hasErrors = Object.values(validationErrors).some(error => error !== "");
+    
+    if (hasErrors) {
+      setErrors(validationErrors);
+      setMessage("⚠️ Please fix all validation errors before submitting");
       setIsSuccess(false);
       return;
     }
@@ -27,20 +134,17 @@ const Contact = () => {
     // Set loading state
     setLoading(true);
     setMessage("");
+    setErrors({});
 
     try {
-      // Collect form data
-      const formData = new FormData(e.target);
-      const data = Object.fromEntries(formData.entries());
+      // Add rating to data
       data.rating = rating;
 
-      // Debug: Log the data being sent
       console.log("📤 Submitting review data:", data);
 
       // Call API
       const response = await ReviewsAPI.create(data);
       
-      // Debug: Log successful response
       console.log("✅ API Response:", response);
 
       // Show success message
@@ -51,16 +155,14 @@ const Contact = () => {
       e.target.reset();
       setRating(0);
 
-      // Optional: Auto-clear success message after 5 seconds
+      // Auto-clear success message after 5 seconds
       setTimeout(() => {
         setMessage("");
       }, 5000);
 
     } catch (err) {
-      // Debug: Log error
       console.error("❌ Error submitting review:", err);
       
-      // Show error message
       const errorMsg = err?.response?.data?.message || 
                       err?.data?.message || 
                       err?.message || 
@@ -168,10 +270,16 @@ const Contact = () => {
                       <input
                         type="text"
                         name="name"
-                        className="form-control input-field"
-                        required
+                        className={`form-control input-field ${errors.name ? 'is-invalid' : ''}`}
                         placeholder="Enter your name"
+                        onChange={handleInputChange}
+                        required
                       />
+                      {errors.name && (
+                        <small className="text-danger">
+                          <i className="fa fa-exclamation-circle"></i> {errors.name}
+                        </small>
+                      )}
                     </div>
                     <div className="col-md-6">
                       <label>
@@ -180,10 +288,16 @@ const Contact = () => {
                       <input
                         type="email"
                         name="email"
-                        className="form-control input-field"
-                        required
+                        className={`form-control input-field ${errors.email ? 'is-invalid' : ''}`}
                         placeholder="your.email@example.com"
+                        onChange={handleInputChange}
+                        required
                       />
+                      {errors.email && (
+                        <small className="text-danger">
+                          <i className="fa fa-exclamation-circle"></i> {errors.email}
+                        </small>
+                      )}
                     </div>
                   </div>
 
@@ -194,7 +308,8 @@ const Contact = () => {
                       </label>
                       <select
                         name="product"
-                        className="form-control input-field"
+                        className={`form-control input-field ${errors.product ? 'is-invalid' : ''}`}
+                        onChange={handleInputChange}
                         required
                       >
                         <option value="">Select a product</option>
@@ -203,6 +318,11 @@ const Contact = () => {
                         <option value="Red Velvet Cake">Red Velvet Cake</option>
                         <option value="Cheesecake">Cheesecake</option>
                       </select>
+                      {errors.product && (
+                        <small className="text-danger">
+                          <i className="fa fa-exclamation-circle"></i> {errors.product}
+                        </small>
+                      )}
                     </div>
                   </div>
 
@@ -222,16 +342,20 @@ const Contact = () => {
                               star <= rating ? "text-warning" : "text-secondary"
                             }`}
                             style={{ cursor: "pointer", marginRight: "8px" }}
-                            onClick={() => {
-                              setRating(star);
-                              console.log("⭐ Rating set to:", star);
-                            }}
+                            onClick={() => handleRatingChange(star)}
                           ></i>
                         ))}
                       </div>
                       <small>
                         {rating > 0 ? `You rated ${rating}/5 ⭐` : "Click to rate"}
                       </small>
+                      {errors.rating && (
+                        <div>
+                          <small className="text-danger">
+                            <i className="fa fa-exclamation-circle"></i> {errors.rating}
+                          </small>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -242,11 +366,17 @@ const Contact = () => {
                       </label>
                       <textarea
                         name="review"
-                        className="textarea-field form-control"
+                        className={`textarea-field form-control ${errors.review ? 'is-invalid' : ''}`}
                         rows="4"
+                        placeholder="Share your experience with us... (10-500 characters)"
+                        onChange={handleInputChange}
                         required
-                        placeholder="Share your experience with us..."
                       ></textarea>
+                      {errors.review && (
+                        <small className="text-danger">
+                          <i className="fa fa-exclamation-circle"></i> {errors.review}
+                        </small>
+                      )}
                     </div>
                   </div>
 
@@ -254,10 +384,10 @@ const Contact = () => {
                     <button
                       type="submit"
                       className="btn btn-primary"
-                      disabled={loading || rating === 0}
+                      disabled={loading}
                       style={{
-                        opacity: loading || rating === 0 ? 0.6 : 1,
-                        cursor: loading || rating === 0 ? "not-allowed" : "pointer"
+                        opacity: loading ? 0.6 : 1,
+                        cursor: loading ? "not-allowed" : "pointer"
                       }}
                     >
                       {loading ? (
@@ -269,12 +399,6 @@ const Contact = () => {
                         "Submit Review"
                       )}
                     </button>
-                    
-                    {rating === 0 && !loading && (
-                      <small className="text-danger ms-2">
-                        ⚠️ Please select a rating
-                      </small>
-                    )}
                   </div>
                 </form>
               </div>
