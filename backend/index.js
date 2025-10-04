@@ -17,6 +17,7 @@ import productRoute from "./routes/Productroutes.js";
 import orderRoute from "./routes/orderRoutes.js"; // core order flow (your existing)
 import reviewRoute from "./routes/reviewRoutes.js";
 import complaintRoute from "./routes/ComplaintRoutes.js";
+import adminrouter from "./routes/Adminroutes.js";
 
 /* ---------------- Delivery routes (ESM, default export) ---------------- */
 import normalOrderRoute from "./routes/delivery/orderRoutes.js"; // Normal delivery orders
@@ -67,6 +68,7 @@ app.use("/api/products", productRoute);
 app.use("/api/order", orderRoute); // core order flow
 app.use("/api/reviews", reviewRoute);
 app.use("/api/complaints", complaintRoute);
+app.use("/admins", adminrouter);
 
 /* ---------------- API (delivery) ---------------- */
 // Primary mount
