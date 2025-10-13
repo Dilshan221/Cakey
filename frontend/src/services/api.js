@@ -221,6 +221,10 @@ export const apiService = {
     return this.request(`/employees${qs(query)}`);
   },
   getEmployees(query = {}) {
+<<<<<<< Updated upstream
+=======
+    // <— alias for older code
+>>>>>>> Stashed changes
     return this.listEmployees(query);
   },
   getEmployee(id) {
@@ -265,7 +269,25 @@ export const apiService = {
     return this.request("/employees/stats");
   },
 
+<<<<<<< Updated upstream
   /* ------------------------------ Attendance --------------------------- */
+=======
+  // OTP helpers used by your OtpModal
+  sendEmployeeOtp(id, phone) {
+    return this.request(`/employees/${id}/otp/send`, {
+      method: "POST",
+      body: { phone },
+    });
+  },
+  verifyEmployeeOtp(id, code) {
+    return this.request(`/employees/${id}/otp/verify`, {
+      method: "POST",
+      body: { code },
+    });
+  },
+
+  /* ------------------------------ Attendance ----------------------------- */
+>>>>>>> Stashed changes
   listAttendance(query = {}) {
     return this.request(`/attendance${qs(query)}`);
   },

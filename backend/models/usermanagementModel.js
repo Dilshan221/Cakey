@@ -15,12 +15,19 @@ const userManagementSchema = new mongoose.Schema(
     password: { type: String, required: true }, // hashed in pre-save
     birthday: { type: Date },
     newsletter: { type: Boolean, default: false },
-    role: { type: String, enum: ["customer", "admin"], default: "customer" },
+
+    role: {
+      type: String,
+      enum: ["customer", "admin", "product", "delivery", "user", "complain"],
+      default: "customer",
+    },
+
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true, collection: "usermanagement" }
 );
 
+// Hash pwd
 userManagementSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
@@ -28,6 +35,7 @@ userManagementSchema.pre("save", async function (next) {
   next();
 });
 
+// Compare pwd
 userManagementSchema.methods.matchPassword = function (entered) {
   return bcrypt.compare(entered, this.password);
 };
