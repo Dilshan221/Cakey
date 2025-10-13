@@ -1,16 +1,14 @@
 // src/pages/signup.jsx
 import React, { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-// ✅ one-level up from /pages to /services
-import { apiService } from "../../services/api";
-
 import {
   faUser,
   faEnvelope,
   faLock,
   faBirthdayCake,
+  faEye,
+  faEyeSlash,
   faCheck,
-  // optional: use real icons instead of shims
   faCookieBite,
   faIceCream,
 } from "@fortawesome/free-solid-svg-icons";
@@ -19,10 +17,14 @@ import {
   faGoogle,
   faTwitter,
 } from "@fortawesome/free-brands-svg-icons";
+// one-level up from /pages to /services
+import { apiService } from "../../services/api";
 
 export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [form, setForm] = useState({
     firstname: "",
     lastname: "",
@@ -83,11 +85,10 @@ export default function Signup() {
       password,
       confirmPassword,
       birthday,
-      terms,
       newsletter,
+      terms,
     } = form;
 
-    // basic client-side checks
     if (!firstname || !lastname || !email || !password) {
       setServerError("Please fill in all required fields.");
       return;
@@ -108,7 +109,6 @@ export default function Signup() {
       return;
     }
 
-    // ✅ safer birthday handling: send plain "YYYY-MM-DD"
     const payload = {
       firstname,
       lastname,
@@ -121,9 +121,9 @@ export default function Signup() {
     try {
       setLoading(true);
       const data = await apiService.registerUser(payload);
-      window.alert(`Welcome, ${data.firstname}! Your account was created.`);
-
-      // Optional: reset form
+      window.alert(
+        `Welcome, ${data.firstname || firstname}! Your account was created.`
+      );
       setForm({
         firstname: "",
         lastname: "",
@@ -134,13 +134,15 @@ export default function Signup() {
         terms: false,
         newsletter: false,
       });
-      // navigate("/login");
     } catch (err) {
       const msg =
         err?.data?.message ||
         err?.message ||
         "Registration failed. Please try again.";
       setServerError(msg);
+      setTimeout(() => {
+        document.querySelector(".cb-alert")?.focus();
+      }, 0);
     } finally {
       setLoading(false);
     }
@@ -149,8 +151,8 @@ export default function Signup() {
   return (
     <div className="cb-signup">
       <div className="cb-container">
-        {/* Left */}
-        <div className="cb-left">
+        {/* Left: brand / benefits */}
+        <aside className="cb-left">
           <div className="cb-logo">
             <h1>Cake &amp; Bake</h1>
           </div>
@@ -198,464 +200,460 @@ export default function Signup() {
               <FontAwesomeIcon icon={faIceCream} />
             </div>
           </div>
-        </div>
+        </aside>
 
-        {/* Right */}
-        <div className="cb-right">
-          <h2>Create Account</h2>
+        {/* Right: card + form */}
+        <section className="cb-right">
+          <div className="cb-card">
+            <h2>Create Account</h2>
 
-          {/* server error (if any) */}
-          {serverError ? (
-            <div
-              role="alert"
-              style={{
-                background: "#ffe6e6",
-                color: "#b10000",
-                padding: "10px 12px",
-                borderRadius: 8,
-                marginBottom: 12,
-                border: "1px solid #ffcccc",
-              }}
-            >
-              {serverError}
-            </div>
-          ) : null}
+            {serverError ? (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="cb-alert"
+                tabIndex={-1}
+              >
+                {serverError}
+              </div>
+            ) : null}
 
-          <form onSubmit={onSubmit} id="signup-form" noValidate>
-            <div className="cb-name-fields">
-              <div className="cb-form-group">
-                <label htmlFor="firstname">First Name</label>
-                <div className="cb-input-icon">
-                  <FontAwesomeIcon icon={faUser} />
+            <form onSubmit={onSubmit} id="signup-form" noValidate>
+              {/* First name */}
+              <div className="cb-field">
+                <label className="cb-floating">
                   <input
                     type="text"
                     id="firstname"
                     name="firstname"
-                    placeholder="First name"
+                    placeholder=" "
                     value={form.firstname}
                     onChange={onChange}
                     disabled={loading}
                     autoComplete="given-name"
                     required
                   />
-                </div>
+                  <span>First name</span>
+                  <div className="cb-left-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={faUser} />
+                  </div>
+                </label>
               </div>
-              <div className="cb-form-group">
-                <label htmlFor="lastname">Last Name</label>
-                <div className="cb-input-icon">
-                  <FontAwesomeIcon icon={faUser} />
+
+              {/* Last name */}
+              <div className="cb-field">
+                <label className="cb-floating">
                   <input
                     type="text"
                     id="lastname"
                     name="lastname"
-                    placeholder="Last name"
+                    placeholder=" "
                     value={form.lastname}
                     onChange={onChange}
                     disabled={loading}
                     autoComplete="family-name"
                     required
                   />
-                </div>
-              </div>
-            </div>
-
-            <div className="cb-form-group">
-              <label htmlFor="email">Email Address</label>
-              <div className="cb-input-icon">
-                <FontAwesomeIcon icon={faEnvelope} />
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Enter your email address"
-                  value={form.email}
-                  onChange={onChange}
-                  disabled={loading}
-                  autoComplete="email"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="cb-form-group">
-              <label htmlFor="password">Password</label>
-              <div className="cb-input-icon">
-                <FontAwesomeIcon icon={faLock} />
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="Create a password"
-                  value={form.password}
-                  onChange={onChange}
-                  disabled={loading}
-                  autoComplete="new-password"
-                  minLength={8}
-                  required
-                />
-              </div>
-              <div className={`cb-password-strength ${strength}`} />
-              <div className="cb-password-strength-text">{strengthText}</div>
-            </div>
-
-            <div className="cb-form-group">
-              <label htmlFor="confirmPassword">Re-enter Password</label>
-              <div
-                className={`cb-input-icon ${
-                  passwordsMismatch ? "cb-invalid" : ""
-                }`}
-              >
-                <FontAwesomeIcon icon={faLock} />
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  placeholder="Re-enter password"
-                  value={form.confirmPassword}
-                  onChange={onChange}
-                  aria-invalid={passwordsMismatch}
-                  aria-describedby="confirmPasswordHelp"
-                  disabled={loading}
-                  autoComplete="new-password"
-                  required
-                />
-              </div>
-              {passwordsMismatch ? (
-                <div id="confirmPasswordHelp" className="cb-field-error">
-                  Passwords do not match
-                </div>
-              ) : (
-                form.confirmPassword && (
-                  <div id="confirmPasswordHelp" className="cb-field-ok">
-                    Passwords match
+                  <span>Last name</span>
+                  <div className="cb-left-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={faUser} />
                   </div>
-                )
-              )}
-            </div>
+                </label>
+              </div>
 
-            <div className="cb-form-group">
-              <label htmlFor="birthday">Birthday (Optional)</label>
-              <div className="cb-input-icon">
-                <FontAwesomeIcon icon={faBirthdayCake} />
+              {/* Email */}
+              <div className="cb-field">
+                <label className="cb-floating">
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    inputMode="email"
+                    placeholder=" "
+                    value={form.email}
+                    onChange={onChange}
+                    disabled={loading}
+                    autoComplete="email"
+                    required
+                  />
+                  <span>Email address</span>
+                  <div className="cb-left-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={faEnvelope} />
+                  </div>
+                </label>
+              </div>
+
+              {/* Password */}
+              <div className="cb-field">
+                <label className="cb-floating">
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    placeholder=" "
+                    value={form.password}
+                    onChange={onChange}
+                    disabled={loading}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                  <span>Password</span>
+                  <div className="cb-left-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={faLock} />
+                  </div>
+                  <button
+                    type="button"
+                    className="cb-icon-btn"
+                    onClick={() => setShowPwd((s) => !s)}
+                    aria-label={showPwd ? "Hide password" : "Show password"}
+                    disabled={loading}
+                  >
+                    <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
+                  </button>
+                </label>
+                <div className={`cb-password-strength ${strength}`} />
+                <div className="cb-password-strength-text">{strengthText}</div>
+              </div>
+
+              {/* Confirm password */}
+              <div className="cb-field">
+                <label
+                  className={`cb-floating ${
+                    passwordsMismatch ? "is-invalid" : ""
+                  }`}
+                >
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    placeholder=" "
+                    value={form.confirmPassword}
+                    onChange={onChange}
+                    aria-invalid={passwordsMismatch}
+                    aria-describedby="confirmPasswordHelp"
+                    disabled={loading}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <span>Confirm password</span>
+                  <div className="cb-left-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={faLock} />
+                  </div>
+                  <button
+                    type="button"
+                    className="cb-icon-btn"
+                    onClick={() => setShowConfirm((s) => !s)}
+                    aria-label={
+                      showConfirm
+                        ? "Hide confirm password"
+                        : "Show confirm password"
+                    }
+                    disabled={loading}
+                  >
+                    <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} />
+                  </button>
+                </label>
+
+                {passwordsMismatch ? (
+                  <div id="confirmPasswordHelp" className="cb-field-error">
+                    Passwords do not match
+                  </div>
+                ) : (
+                  form.confirmPassword && (
+                    <div id="confirmPasswordHelp" className="cb-field-ok">
+                      Passwords match
+                    </div>
+                  )
+                )}
+              </div>
+
+              {/* Birthday (optional) */}
+              <div className="cb-field">
+                <label className="cb-floating">
+                  <input
+                    type="date"
+                    id="birthday"
+                    name="birthday"
+                    placeholder=" "
+                    value={form.birthday}
+                    onChange={onChange}
+                    disabled={loading}
+                    autoComplete="bday"
+                  />
+                  <span>Birthday (optional)</span>
+                  <div className="cb-left-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={faBirthdayCake} />
+                  </div>
+                </label>
+              </div>
+
+              {/* Terms + newsletter */}
+              <div className="cb-terms">
                 <input
-                  type="date"
-                  id="birthday"
-                  name="birthday"
-                  value={form.birthday}
+                  type="checkbox"
+                  id="terms"
+                  name="terms"
+                  checked={form.terms}
                   onChange={onChange}
                   disabled={loading}
-                  autoComplete="bday"
+                  required
                 />
+                <label htmlFor="terms">
+                  I agree to the <a href="#">Terms of Service</a> and{" "}
+                  <a href="#">Privacy Policy</a>
+                </label>
               </div>
+
+              <div className="cb-terms">
+                <input
+                  type="checkbox"
+                  id="newsletter"
+                  name="newsletter"
+                  checked={form.newsletter}
+                  onChange={onChange}
+                  disabled={loading}
+                />
+                <label htmlFor="newsletter">
+                  Send me special offers and updates
+                </label>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                className="cb-btn-signup"
+                disabled={loading || formInvalid}
+                aria-disabled={loading || formInvalid}
+              >
+                {loading ? "Creating..." : "Create Account"}
+              </button>
+            </form>
+
+            {/* Divider + socials */}
+            <div className="cb-separator">
+              <span>or sign up with</span>
             </div>
 
-            <div className="cb-terms">
-              <input
-                type="checkbox"
-                id="terms"
-                name="terms"
-                checked={form.terms}
-                onChange={onChange}
-                disabled={loading}
-                required
-              />
-              <label htmlFor="terms">
-                I agree to the <a href="#">Terms of Service</a> and{" "}
-                <a href="#">Privacy Policy</a>
-              </label>
+            <div className="cb-social">
+              <a
+                href="#"
+                className={`cb-social-btn facebook ${
+                  loading ? "disabled" : ""
+                }`}
+                aria-label="Sign up with Facebook"
+                onClick={(e) => e.preventDefault()}
+              >
+                <FontAwesomeIcon icon={faFacebookF} />
+              </a>
+              <a
+                href="#"
+                className={`cb-social-btn google ${loading ? "disabled" : ""}`}
+                aria-label="Sign up with Google"
+                onClick={(e) => e.preventDefault()}
+              >
+                <FontAwesomeIcon icon={faGoogle} />
+              </a>
+              <a
+                href="#"
+                className={`cb-social-btn twitter ${loading ? "disabled" : ""}`}
+                aria-label="Sign up with Twitter"
+                onClick={(e) => e.preventDefault()}
+              >
+                <FontAwesomeIcon icon={faTwitter} />
+              </a>
             </div>
 
-            <div className="cb-terms">
-              <input
-                type="checkbox"
-                id="newsletter"
-                name="newsletter"
-                checked={form.newsletter}
-                onChange={onChange}
-                disabled={loading}
-              />
-              <label htmlFor="newsletter">
-                Send me special offers and updates
-              </label>
+            <div className="cb-login">
+              Already have an account? <a href="/login">Log in</a>
             </div>
-
-            <button
-              type="submit"
-              className="cb-btn-signup"
-              disabled={loading || formInvalid}
-              aria-disabled={loading || formInvalid}
-            >
-              {loading ? "Creating..." : "Create Account"}
-            </button>
-          </form>
-
-          <div className="cb-separator">
-            <span>Or sign up with</span>
           </div>
-
-          <div className="cb-social">
-            <a
-              href="#"
-              className={`cb-social-btn facebook ${loading ? "disabled" : ""}`}
-              aria-label="Sign up with Facebook"
-              onClick={(e) => e.preventDefault()}
-            >
-              <FontAwesomeIcon icon={faFacebookF} />
-            </a>
-            <a
-              href="#"
-              className={`cb-social-btn google ${loading ? "disabled" : ""}`}
-              aria-label="Sign up with Google"
-              onClick={(e) => e.preventDefault()}
-            >
-              <FontAwesomeIcon icon={faGoogle} />
-            </a>
-            <a
-              href="#"
-              className={`cb-social-btn twitter ${loading ? "disabled" : ""}`}
-              aria-label="Sign up with Twitter"
-              onClick={(e) => e.preventDefault()}
-            >
-              <FontAwesomeIcon icon={faTwitter} />
-            </a>
-          </div>
-
-          <div className="cb-login">
-            Already have an account? <a href="#">Log in</a>
-          </div>
-        </div>
+        </section>
       </div>
 
-      {/* Scoped styles (only affect this component) */}
-      <style>{`
-        .cb-signup * { box-sizing: border-box; }
-        .cb-signup {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-          padding: 20px;
-          background: linear-gradient(to bottom right, #ffe9dc, #ffd4c2);
-          color: #333;
-          font-family: Arial, sans-serif;
-        }
-
-        .cb-container {
-          display: flex;
-          width: 900px;
-          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-          border-radius: 15px;
-          overflow: hidden;
-          background: #fff;
-        }
-
-        .cb-left {
-          flex: 1;
-          background: #ff6f61;
-          color: #fff;
-          padding: 40px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          text-align: center;
-          position: relative;
-          overflow: hidden;
-        }
-        .cb-left::before {
-          content: '';
-          position: absolute;
-          top: -70px; right: -70px;
-          width: 200px; height: 200px;
-          background: rgba(255,255,255,0.1);
-          border-radius: 50%;
-        }
-        .cb-left::after {
-          content: '';
-          position: absolute;
-          bottom: -80px; left: -80px;
-          width: 250px; height: 250px;
-          background: rgba(255,255,255,0.1);
-          border-radius: 50%;
-        }
-        .cb-logo { margin-bottom: 30px; z-index: 1; }
-        .cb-logo h1 {
-          font-family: 'Brush Script MT', cursive;
-          font-size: 42px;
-          color: #fff;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        .cb-left h2 { font-size: 28px; margin-bottom: 20px; z-index: 1; }
-        .cb-left p { margin-bottom: 30px; line-height: 1.6; z-index: 1; }
-
-        .cb-benefits { text-align: left; margin: 20px 0; z-index: 1; list-style: none; padding: 0; }
-        .cb-benefits li { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-        .cb-benefits i {
-          color: #fff;
-          background: rgba(255,255,255,0.2);
-          width: 25px; height: 25px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          font-style: normal;
-        }
-
-        .cb-cake-icons { display: flex; gap: 20px; margin-top: 20px; z-index: 1; }
-        .cb-cake-icon {
-          font-size: 28px;
-          background: rgba(255,255,255,0.2);
-          width: 60px; height: 60px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          transition: transform 0.3s;
-        }
-        .cb-cake-icon:hover { transform: translateY(-5px); }
-
-        .cb-right {
-          flex: 1;
-          background: #fff;
-          padding: 40px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-        .cb-right h2 {
-          color: #e74c3c;
-          font-size: 28px;
-          margin-bottom: 30px;
-          text-align: center;
-        }
-
-        .cb-form-group { margin-bottom: 20px; }
-        .cb-form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
-
-        .cb-input-icon { position: relative; }
-        .cb-input-icon > svg {
-          position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
-          color: #ff6f61;
-        }
-        .cb-input-icon input, .cb-input-icon select {
-          width: 100%;
-          padding: 15px 15px 15px 45px;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          font-size: 16px;
-          transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        .cb-input-icon input:focus, .cb-input-icon select:focus {
-          outline: none;
-          border-color: #ff6f61;
-          box-shadow: 0 0 0 2px rgba(255, 111, 97, 0.2);
-        }
-        .cb-input-icon input:disabled, .cb-input-icon select:disabled {
-          background-color: #f9f9f9;
-          cursor: not-allowed;
-          opacity: 0.7;
-        }
-
-        .cb-name-fields { display: flex; gap: 15px; }
-        .cb-name-fields .cb-form-group { flex: 1; }
-
-        .cb-terms { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 20px; }
-        .cb-terms input { margin-top: 5px; accent-color: #ff6f61; }
-        .cb-terms input:disabled { opacity: 0.7; cursor: not-allowed; }
-        .cb-terms label { font-size: 14px; color: #555; }
-        .cb-terms a { color: #ff6f61; text-decoration: none; font-weight: 600; }
-        .cb-terms a:hover { text-decoration: underline; }
-
-        .cb-btn-signup {
-          background: #ff6f61;
-          color: #fff;
-          border: none;
-          padding: 15px;
-          border-radius: 8px;
-          font-size: 16px;
-          cursor: pointer;
-          transition: background 0.3s;
-          font-weight: 600;
-          width: 100%;
-        }
-        .cb-btn-signup:hover:not(:disabled) { background: #e74c3c; }
-        .cb-btn-signup:disabled {
-          background: #ccc;
-          cursor: not-allowed;
-        }
-
-        .cb-separator { display: flex; align-items: center; margin: 25px 0; color: #777; }
-        .cb-separator::before, .cb-separator::after { content: ''; flex: 1; height: 1px; background: #ddd; }
-        .cb-separator span { padding: 0 15px; }
-
-        .cb-social { display: flex; gap: 15px; justify-content: center; margin-bottom: 25px; }
-        .cb-social-btn {
-          display: flex; align-items: center; justify-content: center;
-          width: 50px; height: 50px; border-radius: 50%;
-          background: #f5f5f5; color: #555; font-size: 18px;
-          transition: all 0.3s; border: 1px solid #eee;
-          cursor: pointer;
-          text-decoration: none;
-        }
-        .cb-social-btn:hover:not(.disabled) { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .cb-social-btn.facebook:hover:not(.disabled) { background: #3b5998; color: #fff; }
-        .cb-social-btn.google:hover:not(.disabled) { background: #dd4b39; color: #fff; }
-        .cb-social-btn.twitter:hover:not(.disabled) { background: #1da1f2; color: #fff; }
-        .cb-social-btn.disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .cb-login { text-align: center; margin-top: 20px; color: #555; }
-        .cb-login a { color: #ff6f61; text-decoration: none; font-weight: 600; transition: color 0.3s; }
-        .cb-login a:hover { color: #e74c3c; text-decoration: underline; }
-
-        .cb-password-strength {
-          height: 5px; background: #eee; margin-top: 5px; border-radius: 3px; position: relative; overflow: hidden;
-        }
-        .cb-password-strength::before {
-          content: ''; position: absolute; height: 100%; width: 0; border-radius: 3px;
-          transition: width 0.3s, background 0.3s;
-        }
-        .cb-password-strength.weak::before { width: 33.33%; background: #e74c3c; }
-        .cb-password-strength.medium::before { width: 66.66%; background: #f39c12; }
-        .cb-password-strength.strong::before { width: 100%; background: #2ecc71; }
-        .cb-password-strength-text { font-size: 12px; margin-top: 3px; text-align: right; color: #777; }
-
-        /* ✅ New feedback styles for confirm password */
-        .cb-input-icon.cb-invalid input {
-          border-color: #e74c3c;
-          box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.15);
-        }
-        .cb-field-error {
-          color: #e74c3c;
-          font-size: 12px;
-          margin-top: 6px;
-          text-align: right;
-        }
-        .cb-field-ok {
-          color: #2ecc71;
-          font-size: 12px;
-          margin-top: 6px;
-          text-align: right;
-        }
-
-        @media (max-width: 768px) {
-          .cb-container { flex-direction: column; width: 100%; }
-          .cb-left, .cb-right { padding: 30px; }
-          .cb-name-fields { flex-direction: column; gap: 0; }
-        }
-      `}</style>
+      {/* Styles */}
+      <style>{signupCss}</style>
     </div>
   );
 }
 
-/**
- * Shims for icons the original HTML showed (cookie + ice-cream) that
- * aren't in @fortawesome/free-solid by default in your deps list.
- * Swap these with real imports if you add them to your library.
- */
-const faCookieBiteShim = {
-  prefix: "fas",
-  iconName: "cookie-bite",
-  icon: [512, 512, [], "f564", ""],
-};
-const faIceCreamShim = {
-  prefix: "fas",
-  iconName: "ice-cream",
-  icon: [512, 512, [], "f810", ""],
-};
+const signupCss = `
+:root{
+  --rose:#ff6f61;
+  --rose-500:#fb6a5e;
+  --brand:#e74c3c;
+  --ink:#1f2937;
+  --muted:#6b7280;
+  --card:#ffffff;
+  --ring:rgba(255,111,97,.35);
+  --ok:#2ecc71;
+  --err:#e74c3c;
+  --warn:#f39c12;
+  --bg-grad-1:#fff7f3;
+  --bg-grad-2:#ffe9dc;
+  --bg-grad-3:#ffd4c2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --card:#111318;
+    --ink:#e5e7eb;
+    --muted:#9ca3af;
+    --bg-grad-1:#0d0f12;
+    --bg-grad-2:#141821;
+    --bg-grad-3:#1a1f2a;
+    --ring:rgba(255,111,97,.28);
+  }
+}
+
+.cb-signup{ min-height:100vh; display:grid; place-items:center; padding:24px; color:var(--ink); font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; position:relative; overflow:hidden; }
+.cb-signup::before{
+  content:""; position:absolute; inset:0; z-index:0;
+  background:
+    radial-gradient(1200px 800px at -10% -20%, var(--bg-grad-1) 0%, transparent 55%),
+    radial-gradient(1100px 900px at 120% 0%, var(--bg-grad-2) 0%, transparent 50%),
+    linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 60%, var(--bg-grad-3) 100%);
+  filter:saturate(1.03);
+}
+@media (prefers-reduced-motion: no-preference){
+  .cb-signup::after{
+    content:""; position:absolute; left:8%; top:10%; width:220px; height:220px; border-radius:50%;
+    background: radial-gradient(closest-side, rgba(255,255,255,.55), rgba(255,255,255,.2), transparent);
+    filter: blur(2px);
+    animation: cb-float 12s ease-in-out infinite;
+  }
+  @keyframes cb-float { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-14px) } }
+}
+
+.cb-container{ position:relative; z-index:1; width:min(1040px, 96vw); display:grid; grid-template-columns: 1.05fr .95fr; gap:28px; }
+@media (max-width: 980px){ .cb-container{ grid-template-columns: 1fr; gap:18px; } }
+
+/* Left panel */
+.cb-left{
+  backdrop-filter: blur(6px);
+  background: rgba(255,255,255,.65);
+  border:1px solid rgba(255,255,255,.75);
+  border-radius:22px;
+  padding:28px 26px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.10);
+  color:#b33a2b;
+}
+@media (prefers-color-scheme: dark){
+  .cb-left{ background: rgba(17,19,24,.55); border-color: rgba(255,255,255,.08); color:#ffb4a9; }
+}
+.cb-logo h1{
+  margin:0 0 6px; font-size:34px; font-weight:900; letter-spacing:.3px;
+  background: linear-gradient(135deg, var(--brand), #ffb8ac);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.cb-left h2{ margin:10px 0 6px; font-size:24px; }
+.cb-left p{ margin:0 0 16px; color:var(--muted); }
+.cb-benefits{ list-style:none; padding:0; margin:12px 0 8px; }
+.cb-benefits li{ display:flex; align-items:center; gap:10px; margin:10px 0; color:var(--ink); }
+.cb-benefits i{
+  width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+  background:#fff; border:1px solid rgba(0,0,0,.06); color:var(--brand);
+  box-shadow: 0 10px 20px rgba(0,0,0,.06);
+}
+.cb-cake-icons{ display:flex; gap:12px; margin-top:12px; }
+.cb-cake-icon{
+  font-size:20px; width:52px; height:52px; border-radius:14px; display:grid; place-items:center;
+  background:#fff; border:1px solid rgba(0,0,0,.06); color:#d14b3c;
+  box-shadow: 0 10px 20px rgba(0,0,0,.06);
+  transition: transform .08s;
+}
+.cb-cake-icon:hover{ transform: translateY(-2px); }
+
+/* Right card */
+.cb-right{ display:grid; place-items:center; }
+.cb-card{
+  width:min(520px, 100%);
+  background: rgba(255,255,255,.75);
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:20px;
+  padding:22px 22px 18px;
+  box-shadow: 0 25px 60px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme: dark){ .cb-card{ background: rgba(17,19,24,.65); border-color: rgba(255,255,255,.08); } }
+.cb-right h2{ margin:0 0 18px; text-align:center; font-size:28px; color:#b33a2b; }
+
+/* Alert */
+.cb-alert{
+  margin:12px 0 0; padding:10px 12px;
+  border:1px solid #ffc9c4; border-radius:12px;
+  background:#fff1ef; color:#991b1b; font-size:14px;
+}
+
+/* Floating fields */
+.cb-field{ margin-top:14px; position:relative; }
+.cb-floating{ position:relative; display:block; }
+.cb-floating input{
+  width:100%; padding: 14px 44px; font-size:15px;
+  border-radius:14px; border:1px solid #eaded8; background:#fff; color:var(--ink);
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.cb-floating input:focus{ outline:none; border-color: var(--rose); box-shadow: 0 0 0 4px var(--ring); }
+@media (prefers-color-scheme: dark){ .cb-floating input{ background:#12141a; border-color:#2a2f3a; } }
+.cb-floating span{
+  position:absolute; left:44px; top:50%; transform: translateY(-50%);
+  pointer-events:none; color:#8b8f97; transition:.15s; background:transparent;
+}
+.cb-floating input::placeholder{ opacity:0; }
+.cb-floating input:not(:placeholder-shown) + span,
+.cb-floating input:focus + span{
+  top:0; transform: translateY(-55%) scale(.92);
+  background:var(--card); padding:0 6px; color:#a3544b; border-radius:8px;
+}
+/* icons + toggles */
+.cb-left-icon{ position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#d1786e; }
+.cb-icon-btn{ position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; cursor:pointer; color:#777; font-size:16px; }
+.cb-icon-btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+/* strength meter */
+.cb-password-strength{ height:6px; background:#eee; margin-top:8px; border-radius:999px; position:relative; overflow:hidden; }
+.cb-password-strength::before{ content:""; position:absolute; inset:0; width:0; transition: width .25s ease, background .25s ease; }
+.cb-password-strength.weak::before{ width:33.33%; background: var(--err); }
+.cb-password-strength.medium::before{ width:66.66%; background: var(--warn); }
+.cb-password-strength.strong::before{ width:100%; background: var(--ok); }
+.cb-password-strength-text{ font-size:12px; margin-top:6px; text-align:right; color:var(--muted); }
+
+/* validation */
+.cb-floating.is-invalid input{ border-color: var(--err); box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.15); }
+.cb-field-error{ color: var(--err); font-size:12px; margin-top:6px; text-align:right; }
+.cb-field-ok{ color: var(--ok); font-size:12px; margin-top:6px; text-align:right; }
+
+/* terms + socials */
+.cb-terms{ display:flex; align-items:flex-start; gap:8px; margin-top:14px; color:#374151; }
+.cb-terms input{ margin-top:5px; accent-color: var(--rose); }
+.cb-terms a{ color: var(--rose-500); font-weight:700; text-decoration:none; }
+.cb-terms a:hover{ text-decoration: underline; }
+
+.cb-btn-signup{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  background:var(--rose); color:#fff; border:none;
+  padding:13px 16px; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer;
+  border:1px solid var(--rose);
+  transition: transform .06s, filter .15s, background .2s, border-color .2s;
+  width:100%; margin-top:14px;
+}
+.cb-btn-signup:hover:not(:disabled){ transform: translateY(-1px); }
+.cb-btn-signup:disabled{ opacity:.65; cursor:not-allowed; }
+
+.cb-separator{ display:flex; align-items:center; gap:10px; margin:16px 0 12px; color:var(--muted); font-size:13px; }
+.cb-separator::before, .cb-separator::after{ content:""; flex:1; height:1px; background: linear-gradient(90deg, transparent, #e7d7d1, transparent); }
+.cb-social{ display:flex; gap:12px; justify-content:center; margin-bottom:8px; }
+.cb-social-btn{
+  width:48px; height:48px; border-radius:12px; display:grid; place-items:center;
+  background:#fff; border:1px solid #eee; color:#5b6068; cursor:pointer;
+  box-shadow: 0 8px 18px rgba(0,0,0,.06);
+  transition: transform .06s, box-shadow .15s, background .15s; text-decoration:none;
+}
+.cb-social-btn:hover{ transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,.08); }
+.cb-social-btn.facebook:hover{ background:#3b5998; color:#fff; }
+.cb-social-btn.google:hover{ background:#ea4335; color:#fff; }
+.cb-social-btn.twitter:hover{ background:#1da1f2; color:#fff; }
+.cb-social-btn.disabled{ opacity:.6; cursor:not-allowed; }
+
+.cb-login{ text-align:center; margin-top:14px; color:#4b5563; }
+.cb-login a{ color: var(--rose-500); font-weight:800; text-decoration:none; }
+.cb-login a:hover{ text-decoration: underline; }
+`;

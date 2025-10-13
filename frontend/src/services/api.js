@@ -216,9 +216,12 @@ export const apiService = {
     return this.request(`/products/categories`);
   },
 
-  /* ------------------------------ Employees ------------------------------ */
+  /* ------------------------------ Employees ---------------------------- */
   listEmployees(query = {}) {
     return this.request(`/employees${qs(query)}`);
+  },
+  getEmployees(query = {}) {
+    return this.listEmployees(query);
   },
   getEmployee(id) {
     return this.request(`/employees/${id}`);
@@ -232,10 +235,51 @@ export const apiService = {
   deleteEmployee(id) {
     return this.request(`/employees/${id}`, { method: "DELETE" });
   },
+  updateEmployeePayout(id, payout) {
+    return this.request(`/employees/${id}/payout`, {
+      method: "PUT",
+      body: payout,
+    });
+  },
+  uploadEmployeeAvatar(id, file) {
+    const fd = new FormData();
+    fd.append("avatar", file);
+    return this.request(`/employees/${id}/avatar`, {
+      method: "POST",
+      body: fd,
+    });
+  },
+  sendEmployeeOtp(id, phone) {
+    return this.request(`/employees/${id}/otp/send`, {
+      method: "POST",
+      body: { phone },
+    });
+  },
+  verifyEmployeeOtp(id, code) {
+    return this.request(`/employees/${id}/otp/verify`, {
+      method: "POST",
+      body: { code },
+    });
+  },
+  getEmployeeStats() {
+    return this.request("/employees/stats");
+  },
 
-  /* ------------------------------ Attendance ----------------------------- */
+  /* ------------------------------ Attendance --------------------------- */
   listAttendance(query = {}) {
     return this.request(`/attendance${qs(query)}`);
+  },
+  getAttendance(id) {
+    return this.request(`/attendance/${id}`);
+  },
+  markAttendance(payload) {
+    return this.request("/attendance", { method: "POST", body: payload });
+  },
+  updateAttendance(id, payload) {
+    return this.request(`/attendance/${id}`, { method: "PUT", body: payload });
+  },
+  deleteAttendance(id) {
+    return this.request(`/attendance/${id}`, { method: "DELETE" });
   },
 
   /* ------------------------------- Payments ------------------------------ */

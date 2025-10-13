@@ -197,7 +197,7 @@ export default function ProductForm() {
       setSubmitting(true);
       await apiService.createProduct(payload);
       alert("✅ Product added successfully!");
-      navigate("/admin/product/dashboard");
+      navigate("/cadmin/product");
     } catch (err) {
       alert(err?.data?.message || err?.message || "Error while adding product");
     } finally {
@@ -486,7 +486,7 @@ export default function ProductForm() {
             <button
               type="button"
               className="btn ghost"
-              onClick={() => navigate("/admin/product/dashboard")}
+              onClick={() => navigate("/cadmin/product")}
             >
               Cancel
             </button>

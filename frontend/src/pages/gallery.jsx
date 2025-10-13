@@ -56,10 +56,11 @@ export default function Gallery() {
           <div className="inside-wrapper container">
             <h2>Our Image gallery</h2>
             <p>
-              Aliquam erat volutpat In id fermentum augue, ut pellentesque leo.
-              Maecenas at arcu risus. Donec commodo sodales ex, scelerisque
-              laoreet nibh hendrerit id. In aliquet magna nec lobortis maximus.
-              Etiam rhoncus leo a dolor placerat, nec elementum ipsum convall.
+              Explore our stunning collection of handcrafted cakes and pastries.
+              Each creation is made with the finest ingredients and artistic
+              precision. From elegant wedding cakes to fun birthday creations,
+              our gallery showcases the quality and creativity that goes into
+              every dessert we make.
             </p>
 
             {/* Filter pills */}
