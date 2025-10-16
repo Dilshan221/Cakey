@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import adminService from "./adminService";
-import AdminDashboard from "./Admindashboard";
+import { adminService } from "../../services/adminServices";
+import Adminmanagerdash from "./Adminmanagerdash";
 
 const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -27,30 +27,38 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
     padding: "20px",
     width: "calc(100% - 250px)",
     boxSizing: "border-box",
-    height: "100vh",
-    overflowY: "auto",
-    background: "#f9f9f9",
+    height: "100vh", // fix height
+    overflowY: "auto", // enable scrolling
+    background: "#f9f9f9", // optional: light background
   };
 
-  const h1Style = { fontSize: "28px", marginBottom: "2px", color: "#e74c3c" };
+  const h1Style = {
+    fontSize: "28px",
+    marginBottom: "2px",
+    color: "#e74c3c",
+  };
 
   const formContainerStyle = {
     background: "white",
     padding: "25px",
-    paddingBottom: "80px",
+    paddingBottom: "80px", // Add this for more space at bottom
     borderRadius: "12px",
     boxShadow: "0 4px 8px rgba(0, 0, 0, 0.05)",
     maxWidth: "700px",
     margin: "0 auto 50px",
   };
 
-  const formGroupStyle = { marginBottom: "20px" };
+  const formGroupStyle = {
+    marginBottom: "20px",
+  };
+
   const labelStyle = {
     display: "block",
     marginBottom: "8px",
     fontWeight: "600",
     color: "#555",
   };
+
   const inputStyle = {
     width: "100%",
     padding: "12px",
@@ -60,13 +68,24 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
     boxSizing: "border-box",
     transition: "border-color 0.3s",
   };
+
   const inputErrorStyle = {
     ...inputStyle,
     borderColor: "#e74c3c",
-    boxShadow: "0 0 0 2px rgba(231,76,60,.2)",
+    boxShadow: "0 0 0 2px rgba(231, 76, 60, 0.2)",
   };
-  const formRowStyle = { display: "flex", gap: "20px", marginBottom: "20px" };
-  const formGroupFlexStyle = { flex: 1, marginBottom: 0 };
+
+  const formRowStyle = {
+    display: "flex",
+    gap: "20px",
+    marginBottom: "20px",
+  };
+
+  const formGroupFlexStyle = {
+    flex: 1,
+    marginBottom: 0,
+  };
+
   const btnSubmitStyle = {
     background: "#ff6f61",
     color: "white",
@@ -75,11 +94,12 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
     borderRadius: "6px",
     fontSize: "16px",
     cursor: "pointer",
-    transition: "background .3s",
+    transition: "background 0.3s",
     width: "100%",
     fontWeight: "600",
     marginBottom: "10px",
   };
+
   const btnCancelStyle = {
     background: "#6c757d",
     color: "white",
@@ -88,21 +108,24 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
     borderRadius: "6px",
     fontSize: "16px",
     cursor: "pointer",
-    transition: "background .3s",
+    transition: "background 0.3s",
     width: "100%",
     fontWeight: "600",
   };
+
   const passwordRequirementsStyle = {
     fontSize: "12px",
     color: "#777",
     marginTop: "5px",
   };
+
   const errorMessageStyle = {
     color: "#e74c3c",
     fontSize: "14px",
     marginTop: "5px",
     display: "block",
   };
+
   const buttonGroupStyle = {
     display: "flex",
     flexDirection: "column",
@@ -138,31 +161,51 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+    }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
-    if (!formData.contactNumber.trim())
+
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    }
+
+    if (!formData.contactNumber.trim()) {
       newErrors.contactNumber = "Contact number is required";
-    if (!formData.email.trim()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(formData.email))
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid";
+    }
 
     if (!editingAdmin) {
-      if (!formData.password) newErrors.password = "Password is required";
-      else if (
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+      } else if (
         !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(formData.password)
       ) {
         newErrors.password =
           "Password must be at least 8 characters with uppercase, lowercase, and number";
       }
-      if (!formData.reEnterPassword)
+
+      if (!formData.reEnterPassword) {
         newErrors.reEnterPassword = "Please confirm your password";
-      else if (formData.password !== formData.reEnterPassword)
+      } else if (formData.password !== formData.reEnterPassword) {
         newErrors.reEnterPassword = "Passwords do not match";
+      }
     } else if (
       formData.password &&
       formData.password !== formData.reEnterPassword
@@ -170,7 +213,9 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
       newErrors.reEnterPassword = "Passwords do not match";
     }
 
-    if (!formData.role) newErrors.role = "Please select a role";
+    if (!formData.role) {
+      newErrors.role = "Please select a role";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -178,10 +223,15 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+
+    if (!validateForm()) {
+      return;
+    }
 
     setLoading(true);
+
     try {
+      let result;
       const submitData = {
         fullName: formData.fullName,
         contactNumber: formData.contactNumber,
@@ -191,7 +241,6 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
         reEnterPassword: formData.reEnterPassword,
       };
 
-      let result;
       if (editingAdmin) {
         if (!formData.password) {
           delete submitData.password;
@@ -204,9 +253,12 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
         alert("Admin created successfully!");
         resetForm();
       }
-      onFormSubmit(result);
-    } catch (err) {
-      alert(err.message || "An error occurred");
+
+      if (onFormSubmit) {
+        onFormSubmit(result);
+      }
+    } catch (error) {
+      alert(error.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -214,11 +266,12 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
 
   return (
     <div>
-      <AdminDashboard />
+      <Adminmanagerdash />
       <div style={mainStyle}>
         <h1 style={h1Style}>
           {editingAdmin ? "Update User" : "Add a role-based user"}
         </h1>
+
         <div style={formContainerStyle}>
           <form onSubmit={handleSubmit}>
             <div style={formRowStyle}>
@@ -366,6 +419,7 @@ const AdminForm = ({ editingAdmin, onFormSubmit, onCancel }) => {
                   ? "Update User"
                   : "Create User"}
               </button>
+
               {editingAdmin && (
                 <button type="button" style={btnCancelStyle} onClick={onCancel}>
                   Cancel

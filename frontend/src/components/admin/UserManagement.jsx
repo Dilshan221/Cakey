@@ -547,6 +547,17 @@ export default function UserManagement() {
                   className="adm-input"
                 />
               </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Phone secondary </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="+94 7X XXX XXXX"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="adm-input"
+                />
+              </div>
 
               <div className="adm-form-group">
                 <label className="adm-label">Department</label>

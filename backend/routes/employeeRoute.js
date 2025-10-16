@@ -1,10 +1,8 @@
-// RESTful employee routes + OTP endpoints
 import express from "express";
 import employeeController from "../controllers/employeeController.js";
 
 const router = express.Router();
 
-// quick ping to verify router
 router.get("/__ping", (_req, res) =>
   res.json({ ok: true, scope: "employees" })
 );
@@ -12,6 +10,11 @@ router.get("/__ping", (_req, res) =>
 // CRUD
 router.post("/", employeeController.create);
 router.get("/", employeeController.list);
+
+// ⬇️ ADD THIS
+router.get("/:id", employeeController.get);
+
+// keep existing
 router.put("/:id", employeeController.update);
 router.delete("/:id", employeeController.remove);
 

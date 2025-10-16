@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
-import adminService from "./adminService";
+import { adminService } from "../../services/adminServices";
 import { useNavigate } from "react-router-dom";
-import AdminDashboard from "./Admindashboard";
+import Adminmanagerdash from "./Adminmanagerdash";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import logo from "../../assets/PDFHeader.png";
 
 const AdminTable = ({ onEdit, refreshTrigger }) => {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+
   const [stats, setStats] = useState({
     total: 0,
     productManagers: 0,
@@ -25,7 +30,12 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
     background: "#f9f9f9",
   };
 
-  const h1Style = { fontSize: "28px", marginBottom: "20px", color: "#e74c3c" };
+  const h1Style = {
+    fontSize: "28px",
+    marginBottom: "20px",
+    color: "#e74c3c",
+  };
+
   const loadingStyle = {
     textAlign: "center",
     padding: "40px",
@@ -39,23 +49,38 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
     marginBottom: "25px",
     flexWrap: "wrap",
   };
+
   const statCardStyle = {
     background: "white",
     padding: "20px",
     borderRadius: "12px",
-    boxShadow: "0 4px 8px rgba(0,0,0,.05)",
+    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.05)",
     flex: 1,
     minWidth: "180px",
     textAlign: "center",
   };
-  const statCardH2Style = { fontSize: "32px", color: "#ff6f61", margin: 0 };
-  const statCardPStyle = { fontSize: "16px", color: "#555", margin: "5px 0 0" };
+
+  const statCardH2Style = {
+    fontSize: "32px",
+    color: "#ff6f61",
+    margin: 0,
+  };
+
+  const statCardPStyle = {
+    fontSize: "16px",
+    color: "#555",
+    margin: "5px 0 0",
+  };
 
   const tableHeaderStyle = {
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: "20px",
+    gap: "10px",
+    flexWrap: "wrap",
   };
+
   const btnAddStyle = {
     background: "#28a745",
     color: "white",
@@ -64,7 +89,28 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
     borderRadius: "6px",
     fontSize: "16px",
     cursor: "pointer",
-    transition: "background .3s",
+    transition: "background 0.3s",
+    fontWeight: "600",
+  };
+
+  const searchInputStyle = {
+    padding: "10px 15px",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+    fontSize: "16px",
+    width: "250px",
+    outline: "none",
+  };
+
+  const btnPdfStyle = {
+    background: "#ff6f61",
+    color: "white",
+    border: "none",
+    padding: "12px 20px",
+    borderRadius: "6px",
+    fontSize: "16px",
+    cursor: "pointer",
+    transition: "background 0.3s",
     fontWeight: "600",
   };
 
@@ -74,10 +120,15 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
     background: "white",
     borderRadius: "10px",
     overflow: "hidden",
-    boxShadow: "0 4px 8px rgba(0,0,0,.05)",
+    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.05)",
     marginBottom: "20px",
   };
-  const theadStyle = { background: "#ff6f61", color: "white" };
+
+  const theadStyle = {
+    background: "#ff6f61",
+    color: "white",
+  };
+
   const thTdStyle = {
     padding: "14px 16px",
     textAlign: "left",
@@ -91,11 +142,20 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
     borderRadius: "6px",
     cursor: "pointer",
     color: "white",
-    transition: ".3s",
+    transition: "0.3s",
     marginRight: "8px",
   };
-  const btnEditStyle = { ...btnStyle, background: "#3498db" };
-  const btnDeleteStyle = { ...btnStyle, background: "#e74c3c", marginRight: 0 };
+
+  const btnEditStyle = {
+    ...btnStyle,
+    background: "#3498db",
+  };
+
+  const btnDeleteStyle = {
+    ...btnStyle,
+    background: "#e74c3c",
+    marginRight: 0,
+  };
 
   const roleBadgeStyle = {
     display: "inline-block",
@@ -104,6 +164,7 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
     fontSize: "12px",
     fontWeight: "600",
   };
+
   const roleStyles = {
     "Product & Inventory Manager": {
       backgroundColor: "#ffe9dc",
@@ -113,14 +174,20 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
       backgroundColor: "#dcf0ff",
       color: "#3498db",
     },
-    "Finance Manager": { backgroundColor: "#e0f8e9", color: "#27ae60" },
+    "Finance Manager": {
+      backgroundColor: "#e0f8e9",
+      color: "#27ae60",
+    },
     "Service & Complaint Manager": {
       backgroundColor: "#f9e6ff",
       color: "#9b59b6",
     },
   };
 
-  const actionButtonsStyle = { display: "flex", gap: "8px" };
+  const actionButtonsStyle = {
+    display: "flex",
+    gap: "8px",
+  };
 
   useEffect(() => {
     loadAdmins();
@@ -129,7 +196,7 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
   const loadAdmins = async () => {
     setLoading(true);
     try {
-      const adminsList = await adminService.listAdmins();
+      const adminsList = await adminService.getAllAdmins();
       setAdmins(adminsList);
       calculateStats(adminsList);
     } catch (error) {
@@ -141,21 +208,22 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
   };
 
   const calculateStats = (adminsList) => {
-    const s = {
+    const stats = {
       total: adminsList.length,
       productManagers: adminsList.filter(
-        (a) => a.role === "Product & Inventory Manager"
+        (admin) => admin.role === "Product & Inventory Manager"
       ).length,
       orderManagers: adminsList.filter(
-        (a) => a.role === "Order & Delivery Manager"
+        (admin) => admin.role === "Order & Delivery Manager"
       ).length,
-      financeManagers: adminsList.filter((a) => a.role === "Finance Manager")
-        .length,
+      financeManagers: adminsList.filter(
+        (admin) => admin.role === "Finance Manager"
+      ).length,
       serviceManagers: adminsList.filter(
-        (a) => a.role === "Service & Complaint Manager"
+        (admin) => admin.role === "Service & Complaint Manager"
       ).length,
     };
-    setStats(s);
+    setStats(stats);
   };
 
   const handleDelete = async (admin) => {
@@ -170,6 +238,42 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
     }
   };
 
+  const filteredAdmins = admins.filter(
+    (admin) =>
+      admin.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      admin.role.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString();
+
+    doc.addImage(logo, "PNG", 15, 10, 50, 25);
+    doc.setFontSize(18);
+    doc.text("User Management Report", 75, 20);
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${date}`, 75, 28);
+
+    const tableColumn = ["Name", "Email", "Contact Number", "Role"];
+    const tableRows = filteredAdmins.map((admin) => [
+      admin.fullName,
+      admin.email,
+      admin.contactNumber,
+      admin.role,
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [tableColumn],
+      body: tableRows,
+      theme: "striped",
+      headStyles: { fillColor: [255, 111, 97] },
+      styles: { fontSize: 11 },
+    });
+
+    doc.save("Admin_Report.pdf");
+  };
   if (loading) {
     return (
       <div style={mainStyle}>
@@ -181,9 +285,10 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
 
   return (
     <div style={mainStyle}>
-      <AdminDashboard />
+      <Adminmanagerdash />
       <h1 style={h1Style}>Role Based User Management</h1>
 
+      {/* Stats Cards */}
       <div style={statsStyle}>
         <div style={statCardStyle}>
           <h2 style={statCardH2Style}>{stats.total}</h2>
@@ -207,12 +312,26 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
         </div>
       </div>
 
+      {/* Search + Buttons */}
       <div style={tableHeaderStyle}>
-        <button style={btnAddStyle} onClick={() => navigate("/addadmin")}>
-          Add New User
-        </button>
+        <input
+          type="text"
+          placeholder="Search by name, email, or role..."
+          style={searchInputStyle}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button style={btnPdfStyle} onClick={generatePDF}>
+            Generate PDF
+          </button>
+          <button style={btnAddStyle} onClick={() => navigate("/addadmin")}>
+            Add New User
+          </button>
+        </div>
       </div>
 
+      {/* Users Table */}
       <table style={tableStyle}>
         <thead style={theadStyle}>
           <tr>
@@ -224,11 +343,13 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
           </tr>
         </thead>
         <tbody>
-          {admins.length > 0 ? (
-            admins.map((admin, index) => (
+          {filteredAdmins.length > 0 ? (
+            filteredAdmins.map((admin, index) => (
               <tr
                 key={admin._id}
-                style={{ background: index % 2 === 0 ? "white" : "#f9f9f9" }}
+                style={{
+                  background: index % 2 === 0 ? "white" : "#f9f9f9",
+                }}
               >
                 <td style={thTdStyle}>{admin.fullName}</td>
                 <td style={thTdStyle}>{admin.email}</td>
@@ -237,7 +358,7 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
                   <span
                     style={{
                       ...roleBadgeStyle,
-                      ...(roleStyles[admin.role] || {}),
+                      ...roleStyles[admin.role],
                     }}
                   >
                     {admin.role}
@@ -247,24 +368,12 @@ const AdminTable = ({ onEdit, refreshTrigger }) => {
                   <button
                     style={btnEditStyle}
                     onClick={() => navigate(`/editadmin/${admin._id}`)}
-                    onMouseEnter={(e) =>
-                      (e.target.style.background = "#2980b9")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.background = "#3498db")
-                    }
                   >
                     Edit
                   </button>
                   <button
                     style={btnDeleteStyle}
                     onClick={() => handleDelete(admin)}
-                    onMouseEnter={(e) =>
-                      (e.target.style.background = "#c0392b")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.background = "#e74c3c")
-                    }
                   >
                     Delete
                   </button>

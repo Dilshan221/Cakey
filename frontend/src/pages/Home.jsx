@@ -19,18 +19,15 @@ const Home = () => {
       const user = userJson ? JSON.parse(userJson) : null;
 
       if (token) {
-        // Attach token to apiService in a flexible way
         if (typeof apiService.setAuthToken === "function") {
           apiService.setAuthToken(token);
         } else if (apiService?.defaults?.headers) {
-          // axios-like
           apiService.defaults.headers.common =
             apiService.defaults.headers.common || {};
           apiService.defaults.headers.common[
             "Authorization"
           ] = `Bearer ${token}`;
         } else {
-          // fallback: expose globally if your apiService reads from here
           window.__CB_AUTH_TOKEN__ = token;
         }
       }
@@ -74,16 +71,13 @@ const Home = () => {
     }
   }, []);
 
-  // ---- Logout clears both storages and returns home ----
+  // ---- Logout ----
   const handleLogout = () => {
     authStorage.removeAll();
-    // Optionally also strip axios header if you set it
     if (apiService?.defaults?.headers?.common?.Authorization) {
       delete apiService.defaults.headers.common.Authorization;
     }
     navigate("/", { replace: true });
-    // hard refresh if you prefer:
-    // window.location.href = "/";
   };
 
   return (
@@ -112,11 +106,11 @@ const Home = () => {
                   Cake & Bake
                 </h1>
                 <p className="header-p">
-                  We offer high quality, delicious, "from scratch" cakes! See
-                  our menu for more information
+                  From classic sponges to custom celebration cakes, everything
+                  is baked fresh daily with real butter, farm eggs, and premium
+                  chocolate. Browse the menu and treat yourself.
                 </p>
 
-                {/* CTA row shows different actions based on auth */}
                 <div
                   className="hidden-small"
                   style={{ display: "flex", gap: 12 }}
@@ -170,8 +164,9 @@ const Home = () => {
               <div className="header-text">
                 <h1>We offer Catering</h1>
                 <p className="header-p">
-                  We offer catering services for any kind of event! Contact us
-                  to make an order
+                  Parties, office events, and weddings—our catering team handles
+                  it all with beautifully presented desserts and on-time
+                  delivery.
                 </p>
                 <div
                   className="hidden-small"
@@ -203,19 +198,23 @@ const Home = () => {
             className="ls-slide"
             data-ls="duration:6000; transition2d:7; kenburnszoom:out; kenburnsscale:1.2;"
           >
-            <img src="assets/img/slider/slide3.webp" className="ls-bg" alt="" />
+            <img
+              src="/assets/img/slider/slide3.webp"
+              className="ls-bg"
+              alt=""
+            />
             <div
               className="ls-l header-wrapper"
               data-ls="offsetyin:150; durationin:700; delayin:200; easingin:easeOutQuint; rotatexin:20; scalexin:1.4; offsetyout:600; durationout:400;"
             >
               <div className="header-text">
                 <h1>
-                  <span>Welcome to</span> <br />
-                  Cake & Bake
+                  <span>Freshly Baked</span> <br />
+                  Every Single Day
                 </h1>
                 <p className="header-p">
-                  We offer high quality, delicious, "from scratch" cakes! See
-                  our menu for more information
+                  Small batches, careful recipes, and friendly service—taste the
+                  difference in every slice.
                 </p>
                 <div
                   className="hidden-small"
@@ -243,16 +242,20 @@ const Home = () => {
             className="ls-slide"
             data-ls="duration:6000; transition2d:7; kenburnszoom:out; kenburnsscale:1.2;"
           >
-            <img src="assets/img/slider/slide4.webp" className="ls-bg" alt="" />
+            <img
+              src="/assets/img/slider/slide4.webp"
+              className="ls-bg"
+              alt=""
+            />
             <div
               className="ls-l header-wrapper"
               data-ls="offsetyin:150; durationin:700; delayin:200; easingin:easeOutQuint; rotatexin:20; scalexin:1.4; offsetyout:600; durationout:400;"
             >
               <div className="header-text">
-                <h1>We offer Catering</h1>
+                <h1>Custom Cakes Made Easy</h1>
                 <p className="header-p">
-                  We offer catering services for any kind of event! Contact us
-                  to make an order
+                  Pick your size, flavor, and design. We’ll bake, decorate, and
+                  deliver right on schedule.
                 </p>
                 <div
                   className="hidden-small"
@@ -291,20 +294,19 @@ const Home = () => {
                 <h2 className="text-center-sm">Made with love</h2>
                 <img
                   className="img-responsive img-rounded pull-right-lg col-md-4 center-block"
-                  src="assets/img/services/services-home.jpg"
+                  src="/assets/img/services/services-home.jpg"
                   alt=""
                 />
                 <p className="lead res-margin">
-                  High Quality services since 2001, qui fabulas definitiones at,
-                  ei nibh offendit mel. Eius comprehensam ex est. Pri ei laudem
-                  invenire, has ex regione sapientem
+                  Since 2001, Cake & Bake has been the neighborhood spot for
+                  unforgettable cakes, cupcakes, and pastries. We use
+                  time-tested recipes, quality ingredients, and a lot of heart.
                 </p>
                 <p>
-                  Lorem ipsum dolor sit amet, per no malorum aliquam utroque,
-                  vim legere eleifend an, malis delicatissimi vel te. Pro
-                  fuisset splendide vulputate an, quo eu eripuit nominati. Sit
-                  enim eius laoreet te, qui fabulas definitiones at, ei nibh
-                  offendit mel.
+                  Whether you’re celebrating a birthday, hosting an event, or
+                  craving a sweet break, our team will help you choose the
+                  perfect treat. Order online, schedule a pickup, or get fast
+                  delivery to your door.
                 </p>
               </div>
 
@@ -320,12 +322,15 @@ const Home = () => {
                     <div className="service-content">
                       <h5>Birthday Cakes</h5>
                       <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Integer dictum malesuada.
+                        From fun themes to elegant finishes, our birthday cakes
+                        are baked to order and tailored to your celebration.
                       </p>
-                      <a className="btn btn-primary btn-md" href="#">
+                      <Link
+                        className="btn btn-primary btn-md"
+                        to="/menu#birthday"
+                      >
                         Read More
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -337,12 +342,15 @@ const Home = () => {
                     <div className="service-content">
                       <h5>Special Cakes</h5>
                       <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Integer dictum malesuada.
+                        Engagements, anniversaries, corporate events—choose your
+                        flavor, filling, and finish for a one-of-a-kind cake.
                       </p>
-                      <a className="btn btn-primary btn-md" href="#">
+                      <Link
+                        className="btn btn-primary btn-md"
+                        to="/menu#special"
+                      >
                         Read More
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -354,12 +362,15 @@ const Home = () => {
                     <div className="service-content">
                       <h5>Cupcakes & Sweets</h5>
                       <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Integer dictum malesuada.
+                        Mix-and-match boxes, brownies, cookies, and more—perfect
+                        for sharing or treating yourself.
                       </p>
-                      <a className="btn btn-primary btn-md" href="#">
+                      <Link
+                        className="btn btn-primary btn-md"
+                        to="/menu#cupcakes"
+                      >
                         Read More
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -371,12 +382,12 @@ const Home = () => {
                     <div className="service-content">
                       <h5>Catering</h5>
                       <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Integer dictum malesuada.
+                        Dessert tables, mini-treat platters, and custom sets
+                        with labels—designed to impress your guests.
                       </p>
-                      <a className="btn btn-primary btn-md" href="#">
+                      <Link className="btn btn-primary btn-md" to="/contact">
                         Read More
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -386,14 +397,14 @@ const Home = () => {
                   <div className="box-hover icon p-3">
                     <i className="flaticon-cooking circle"></i>
                     <div className="service-content">
-                      <h5>Custom orders</h5>
+                      <h5>Custom Orders</h5>
                       <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Integer dictum malesuada.
+                        Share your idea or photo and we’ll bring it to life with
+                        handcrafted details and precise flavors.
                       </p>
-                      <a className="btn btn-primary btn-md" href="#">
+                      <Link className="btn btn-primary btn-md" to="/contact">
                         Read More
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -405,12 +416,12 @@ const Home = () => {
                     <div className="service-content">
                       <h5>Quick Delivery</h5>
                       <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Integer dictum malesuada.
+                        Same-day options in selected areas and reliable
+                        scheduled delivery for birthdays and events.
                       </p>
-                      <a className="btn btn-primary btn-md" href="#">
+                      <Link className="btn btn-primary btn-md" to="/order">
                         Read More
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -447,27 +458,25 @@ const Home = () => {
                         <div className="col-md-5 p-2">
                           <img
                             className="img-responsive img-rounded center-block"
-                            src="assets/img/tab1.jpg"
+                            src="/assets/img/tab1.jpg"
                             alt=""
                           />
                         </div>
                         <h3 className="text-center-sm">Why Choose us?</h3>
                         <p>
-                          Aliquam erat volutpat In id fermentum augue, ut
-                          pellentesque leo. Maecenas at arcu risus. Donec
-                          commodo sodales ex, scelerisque laoreet nibh hendrerit
-                          id.
+                          Friendly service, fair prices, and consistent quality.
+                          Our decorators and bakers collaborate with you to make
+                          sure the cake you imagine is the cake you receive.
                         </p>
                         <p>
                           <strong>
-                            Etiam rhoncus leo a dolor placerat, nec elementum
-                            ipsum convall.
+                            Guaranteed freshness—every cake is baked to order
+                            and never frozen.
                           </strong>
                         </p>
                         <p>
-                          Felis tiam non metus Placerat a ultricies a, posuere
-                          lorem ipseut lincas psuiem t volut pat phas ellus ac
-                          sodales Lorem ipsum dolor sit amet.
+                          Order online in minutes or visit us in-store to sample
+                          flavors and discuss designs with our team.
                         </p>
                       </div>
 
@@ -476,66 +485,51 @@ const Home = () => {
                         <div className="col-md-4 p-2 pull-right-lg">
                           <img
                             className="img-responsive img-rounded center-block"
-                            src="/img/tab2.jpg"
+                            src="/assets/img/tab2.jpg"
                             alt=""
                           />
                         </div>
                         <p>
-                          Aliquam erat volutpat In id fermentum augue, ut
-                          pellentesque leo. Maecenas at arcu risus. Donec
-                          commodo sodales ex, scelerisque laoreet nibh hendrerit
-                          id.
+                          Baking is a craft. We respect classic techniques while
+                          exploring new tastes and textures that our customers
+                          love.
                         </p>
                         <p>
                           <strong>
-                            Etiam rhoncus leo a dolor placerat, nec elementum
-                            ipsum convall.
+                            Community first—we support local suppliers and
+                            celebrate our customers’ milestones.
                           </strong>
                         </p>
                         <ul className="custom pl-0">
-                          <li>
-                            Ipuset phas ellus ac sodales Lorem ipsum dolor
-                          </li>
-                          <li>
-                            Curabitur blandit pretium interdum. Aliquam sit amet
-                            elementum odio, vel ultrices dui.
-                          </li>
-                          <li>
-                            Omnicos directe al desirabilite de un nov lingua
-                            franca.
-                          </li>
-                          <li>
-                            Ipuset phas ellus ac sodales Lorem ipsum dolor
-                          </li>
-                          <li>
-                            Curabitur blandit pretium interdum. Pellentesque ac
-                            odio vitae felis suscipit
-                          </li>
+                          <li>Made fresh daily in small batches</li>
+                          <li>Thoughtful, reusable and recyclable packaging</li>
+                          <li>Seasonal menus inspired by local produce</li>
+                          <li>Clear communication and on-time delivery</li>
+                          <li>Happiness guarantee on every order</li>
                         </ul>
                       </div>
 
-                      <div className="tab-pane fade" href="#C">
+                      {/* Fixed: use id instead of href on the pane */}
+                      <div className="tab-pane fade" id="C">
                         <h3 className="text-center-sm">Quality Ingredients</h3>
                         <p>
-                          Aliquam erat volutpat In id fermentum augue, ut
-                          pellentesque leo. Maecenas at arcu risus.
+                          We bake with real butter, premium cocoa, Madagascar
+                          vanilla, and ripe fruits. No shortcuts, no
+                          compromises.
                         </p>
                         <p>
                           <strong>
-                            Etiam rhoncus leo a dolor placerat, nec elementum
-                            ipsum convall.
+                            Allergies? Ask about our egg-free, dairy-free, and
+                            nut-aware options.
                           </strong>
                         </p>
                         <p>
-                          Felis tiam non metus Placerat a ultricies a, posuere
-                          lorem ipseut lincas psuiem t volut pat phas ellus ac
-                          sodales Lorem ipsum dolor sit amet.
+                          From sponge to frosting, every component is prepared
+                          in house for balanced flavor and perfect texture.
                         </p>
                         <p>
-                          Felis tiam non metus Placerat a ultricies a, posuere
-                          lorem ipseut lincas psuiem t volut pat phas ellus ac
-                          sodales Lorem ipsum dolor sit amet, consectetur
-                          adipisicing elit uasi quidem minus id omnis.
+                          We partner with trusted local suppliers to ensure
+                          freshness and traceability from farm to bakery.
                         </p>
                       </div>
                     </div>
@@ -556,19 +550,19 @@ const Home = () => {
                       <a href="/blog-single">
                         <img
                           className="img-responsive"
-                          src="assets/img/blog/blogprev1.jpg"
+                          src="/assets/img/blog/blogprev1.jpg"
                           alt=""
                         />
                         <div className="post-date">
                           <span className="date">13</span>
-                          <span className="month">jan</span>
+                          <span className="month">Jan</span>
                         </div>
                       </a>
                     </div>
                     <div className="post-review">
                       <h5 className="post-title">
                         <a href="/blog-single">
-                          The Best pastries for easter time
+                          Our Most-Loved Cakes of the Season
                         </a>
                       </h5>
                       <ul className="post-bar">
@@ -582,8 +576,8 @@ const Home = () => {
                         </li>
                       </ul>
                       <p className="post-description">
-                        Lorem ipsum dolor sit amet, consectetur adipisicing
-                        elit. Ad magni, nesciunt obcaecati possimus...
+                        A round-up of customer favorites, from Chocolate Fudge
+                        to Passionfruit Cheesecake—plus pairing tips.
                       </p>
                       <a className="btn btn-primary btn-md" href="/blog-single">
                         Read More
@@ -599,18 +593,18 @@ const Home = () => {
                       <a href="/blog-single">
                         <img
                           className="img-responsive"
-                          src="assets/img/blog/blogprev2.jpg"
+                          src="/assets/img/blog/blogprev2.jpg"
                           alt=""
                         />
                         <div className="post-date">
                           <span className="date">07</span>
-                          <span className="month">feb</span>
+                          <span className="month">Feb</span>
                         </div>
                       </a>
                     </div>
                     <div className="post-review">
                       <h5 className="post-title">
-                        <a href="/blog-single">Order our new Red Velvet Cake</a>
+                        <a href="/blog-single">Say Hello to Our Red Velvet</a>
                       </h5>
                       <ul className="post-bar">
                         <li>
@@ -623,8 +617,8 @@ const Home = () => {
                         </li>
                       </ul>
                       <p className="post-description">
-                        Lorem ipsum dolor sit amet, consectetur adipisicing
-                        elit. Ad magni, nesciunt obcaecati possimus...
+                        Cream-cheese frosting, a tender crumb, and just the
+                        right cocoa—here’s what makes ours special.
                       </p>
                       <a className="btn btn-primary btn-md" href="/blog-single">
                         Read More
@@ -640,20 +634,18 @@ const Home = () => {
                       <a href="/blog-single">
                         <img
                           className="img-responsive"
-                          src="assets/img/blog/blogprev3.jpg"
+                          src="/assets/img/blog/blogprev3.jpg"
                           alt=""
                         />
                         <div className="post-date">
                           <span className="date">13</span>
-                          <span className="month">feb</span>
+                          <span className="month">Feb</span>
                         </div>
                       </a>
                     </div>
                     <div className="post-review">
                       <h5 className="post-title">
-                        <a href="/blog-single">
-                          Order your Valentines day Cake
-                        </a>
+                        <a href="/blog-single">Valentine’s Day Pre-Orders</a>
                       </h5>
                       <ul className="post-bar">
                         <li>
@@ -666,8 +658,8 @@ const Home = () => {
                         </li>
                       </ul>
                       <p className="post-description">
-                        Lorem ipsum dolor sit amet, consectetur adipisicing
-                        elit. Ad magni, nesciunt obcaecati possimus...
+                        Limited-edition heart cakes and cupcake sets. Order now
+                        to secure your delivery window.
                       </p>
                       <a className="btn btn-primary btn-md" href="/blog-single">
                         Read More
@@ -683,19 +675,19 @@ const Home = () => {
                       <a href="/blog-single">
                         <img
                           className="img-responsive"
-                          src="/img/blog/blogprev4.jpg"
+                          src="/assets/img/blog/blogprev4.jpg"
                           alt=""
                         />
                         <div className="post-date">
                           <span className="date">22</span>
-                          <span className="month">feb</span>
+                          <span className="month">Feb</span>
                         </div>
                       </a>
                     </div>
                     <div className="post-review">
                       <h5 className="post-title">
                         <a href="/blog-single">
-                          Gingerbread decoration workshop
+                          Gingerbread Decorating Workshop
                         </a>
                       </h5>
                       <ul className="post-bar">
@@ -709,8 +701,8 @@ const Home = () => {
                         </li>
                       </ul>
                       <p className="post-description">
-                        Lorem ipsum dolor sit amet, consectetur adipisicing
-                        elit. Ad magni, nesciunt obcaecati possimus...
+                        Join our pastry team for a hands-on class. All tools and
+                        treats provided—just bring your creativity!
                       </p>
                       <a className="btn btn-primary btn-md" href="/blog-single">
                         Read More
@@ -724,13 +716,13 @@ const Home = () => {
               <div className="alert-bg alert alert-info col-md-12 margin1">
                 <h5>Custom Orders</h5>
                 <p>
-                  Laoreet nibh hendrerit id. In aliquet magna nec lobortis
-                  maximus. Etiam rhoncus leo a dolor placerat, nec elementum
-                  ipsum convall.
+                  Need a cake that tells your story? Share your theme, colors,
+                  and serving size—we’ll design a sketch and quote within 24
+                  hours.
                 </p>
                 <p>
-                  Etiam rhoncus leo a dolor placerat, nec elementum ipsum
-                  convall Maecenas at arcu risus scelerisque laoree.
+                  Rush orders available on request. Speak with our decorators
+                  for guidance on flavors, fillings, and finishes.
                 </p>
                 <Link className="btn btn-secondary" to="/contact">
                   Contact us

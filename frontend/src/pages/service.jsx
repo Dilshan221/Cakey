@@ -46,17 +46,14 @@ export default function Services() {
               <div className="col-md-7">
                 <h2>Cakes for all occasions</h2>
                 <p>
-                  Aliquam erat volutpat. In id fermentum augue, ut pellentesque
-                  leo. Maecenas at arcu risus. Donec commodo sodales ex,
-                  scelerisque laoreet nibh hendrerit id. In aliquet magna nec
-                  lobortis maximus. Etiam rhoncus leo a dolor placerat, nec
-                  elementum ipsum convall.
+                  Bring your dream cake to life with our custom design service.
+                  Share your ideas and we'll create a unique masterpiece that
+                  exceeds your expectations.
                 </p>
                 <p>
-                  Donec commodo sodales ex, scelerisque laoreet nibh hendrerit
-                  id. In aliquet magna nec Li lingues differe solmen in li
-                  grammatica, li pronunciation e li plu commun vocabules, Etiam
-                  rhoncus leo a dolor placerat, nec elementum ipsum convall.
+                  Safe and timely delivery service to ensure your cake arrives
+                  perfectly. We handle with care and guarantee freshness upon
+                  arrival at your venue.
                 </p>
               </div>
               <div className="col-md-5">

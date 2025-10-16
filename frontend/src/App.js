@@ -48,6 +48,7 @@ import AddAdmin from "./components/user/AdminForm";
 import AdminManager from "./components/user/AdminTable";
 import UserAdminDashboard from "./components/user/Admindashboard";
 import UserSidebar from "./components/user/Sidebar";
+import EditAdmin from "./components/user/EditAdmin";
 
 /* ---------- Product pages (UPDATED PATHS) ---------- */
 import ProductDashboard from "./components/product/ProductDashboard";
@@ -151,7 +152,6 @@ export default function App() {
         <Route path="/cadmin" element={<CadminDashboard />} />
         <Route path="/reviews" element={<ReviewManagement />} />
         <Route path="/complaintadmin" element={<ComplaintManagement />} />
-
         {/* PRODUCT (protected) */}
         <Route element={<RequireAuth />}>
           <Route path="/cadmin/product/*" element={<ProductShell />}>
@@ -165,17 +165,17 @@ export default function App() {
           </Route>
         </Route>
 
-        {/* USER ADMIN (protected) */}
         <Route element={<RequireAuth />}>
           <Route path="/useradmin/*" element={<UserAdminShell />}>
             <Route index element={<UserAdminDashboard />} />
-            <Route path="addadmin" element={<AddAdmin />} />
-            <Route path="adminmanager" element={<AdminManager />} />
-            <Route path="editadmin/:id" element={<AddAdmin />} />
+            <Route path="add" element={<AddAdmin />} /> {/* /useradmin/add */}
+            <Route path="manager" element={<AdminManager />} />{" "}
+            {/* /useradmin/manager */}
+            <Route path="edit/:id" element={<EditAdmin />} />{" "}
+            {/* /useradmin/edit/:id */}
             <Route path="*" element={<Navigate to="/useradmin" replace />} />
           </Route>
         </Route>
-
         {/* ORIGINAL ADMIN (now under /cadmin) */}
         <Route element={<RequireAuth />}>
           <Route path="/admin/*" element={<AdminShell />}>
@@ -194,13 +194,11 @@ export default function App() {
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>
         </Route>
-
         {/* DELIVERY ROUTES */}
         <Route path="/normal-order" element={<NormalOrder />} />
         <Route path="/normal-order-dash" element={<NormalOrderDash />} />
         <Route path="/custom-order" element={<CustomOrder />} />
         <Route path="/custom-order-dash" element={<CustomOrderDash />} />
-
         {/* PUBLIC SITE */}
         <Route element={<PublicLayout />}>
           <Route element={<Layout />}>
@@ -227,11 +225,9 @@ export default function App() {
             <Route path="register" element={<RegisterUser />} />
           </Route>
         </Route>
-
         {/* AUTH */}
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
-
         {/* FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

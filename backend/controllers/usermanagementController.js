@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import UserManagement from "../models/usermanagementModel.js";
 
-/* ------------------------------ helpers ------------------------------ */
 const signToken = (user) =>
   jwt.sign(
     { sub: user._id, role: user.role, email: user.email },
@@ -9,7 +8,6 @@ const signToken = (user) =>
     { expiresIn: "7d" }
   );
 
-/* ------------------------------ auth ------------------------------ */
 // POST /api/usermanagement/login
 export const loginUser = async (req, res, next) => {
   try {
@@ -46,13 +44,11 @@ export const loginUser = async (req, res, next) => {
   }
 };
 
-/* ------------------------------ create ------------------------------ */
 // POST /api/usermanagement/register
 export const registerUser = async (req, res, next) => {
   try {
     const { firstname, lastname, email, password, birthday, newsletter } =
       req.body || {};
-
     if (!firstname || !lastname || !email || !password) {
       res.status(400);
       throw new Error("Missing required fields");
@@ -68,7 +64,7 @@ export const registerUser = async (req, res, next) => {
       firstname,
       lastname,
       email,
-      password, // hashed in pre-save
+      password,
       birthday,
       newsletter: !!newsletter,
     });
@@ -88,7 +84,6 @@ export const registerUser = async (req, res, next) => {
   }
 };
 
-/* ------------------------------ read ------------------------------ */
 // GET /api/usermanagement/all
 export const getAllUsers = async (_req, res, next) => {
   try {
@@ -117,7 +112,6 @@ export const getUserById = async (req, res, next) => {
   }
 };
 
-/* ------------------------------ update ------------------------------ */
 // PUT /api/usermanagement/:id
 export const updateUser = async (req, res, next) => {
   try {
@@ -131,6 +125,7 @@ export const updateUser = async (req, res, next) => {
       role,
       isActive,
     } = req.body || {};
+
     const user = await UserManagement.findById(req.params.id);
     if (!user) {
       res.status(404);
@@ -153,7 +148,7 @@ export const updateUser = async (req, res, next) => {
     user.role = role ?? user.role;
     if (typeof isActive === "boolean") user.isActive = isActive;
 
-    if (password) user.password = password; // will be re-hashed in pre-save
+    if (password) user.password = password; // will be re-hashed
 
     const saved = await user.save();
     res.json({
@@ -172,7 +167,6 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
-/* ------------------------------ delete ------------------------------ */
 // DELETE /api/usermanagement/:id
 export const deleteUser = async (req, res, next) => {
   try {
