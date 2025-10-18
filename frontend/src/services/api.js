@@ -1,0 +1,532 @@
+// src/services/api.js
+
+/* ---------------------------------- Env ---------------------------------- */
+const ENV =
+  (typeof import.meta !== "undefined" && import.meta.env) || process.env;
+
+export const API_BASE_URL =
+  (typeof window !== "undefined" && window.__API_BASE__) ||
+  ENV?.VITE_API_BASE ||
+  ENV?.VITE_API_URL ||
+  ENV?.REACT_APP_API_URL ||
+  "http://localhost:8000/api";
+
+/* ------------------------------- Utilities ------------------------------- */
+const qs = (obj = {}) =>
+{
+  const params = new URLSearchParams();
+  Object.entries(obj).forEach(([k, v]) =>
+  {
+    if (v === undefined || v === null || v === "") return;
+    if (Array.isArray(v)) v.forEach((x) => params.append(k, x));
+    else params.append(k, v);
+  });
+  const s = params.toString();
+  return s ? `?${s}` : "";
+};
+
+const isFormData = (v) =>
+  typeof FormData !== "undefined" && v instanceof FormData;
+
+const resolveUrl = (base, endpoint) =>
+{
+  if (!endpoint) return base;
+  if (/^https?:\/\//i.test(endpoint)) return endpoint;
+  if (base.endsWith("/") && endpoint.startsWith("/"))
+    return base + endpoint.slice(1);
+  if (!base.endsWith("/") && !endpoint.startsWith("/"))
+    return `${base}/${endpoint}`;
+  return base + endpoint;
+};
+
+/* ------------------------------ Auth storage ----------------------------- */
+const authStore = {
+  getToken()
+  {
+    return localStorage.getItem("cb_token");
+  },
+  setAuth({ token, user })
+  {
+    if (token) localStorage.setItem("cb_token", token);
+    if (user) localStorage.setItem("cb_user", JSON.stringify(user));
+  },
+  clear()
+  {
+    localStorage.removeItem("cb_token");
+    localStorage.removeItem("cb_user");
+  },
+  currentUser()
+  {
+    try
+    {
+      return JSON.parse(localStorage.getItem("cb_user") || "null");
+    } catch
+    {
+      return null;
+    }
+  },
+};
+
+/* ------------------------------- HTTP client ----------------------------- */
+let AUTH_TOKEN = null;
+
+export const apiService = {
+  setAuthToken(token)
+  {
+    AUTH_TOKEN = token || null;
+  },
+
+  async request(endpoint, options = {})
+  {
+    const url = resolveUrl(API_BASE_URL, endpoint);
+    const token = AUTH_TOKEN ?? authStore.getToken();
+
+    const controller =
+      typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timeoutMs = options.timeoutMs ?? 12000;
+    let timer = null;
+    if (controller) timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    const usingFormData = isFormData(options.body);
+    const initialHeaders = options.headers || {};
+
+    const headers = {
+      ...(usingFormData ? {} : { "Content-Type": "application/json" }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...initialHeaders,
+    };
+
+    const cfg = {
+      method: options.method || "GET",
+      headers,
+      credentials: "omit",
+      signal: controller?.signal,
+      ...options,
+    };
+
+    // Serialize JS object bodies (but not FormData / strings / Blobs)
+    if (cfg.body && !usingFormData && typeof cfg.body === "object")
+    {
+      cfg.body = JSON.stringify(cfg.body);
+    }
+
+    try
+    {
+      const res = await fetch(url, cfg);
+
+      // Non-2xx → try to parse error body
+      if (!res.ok)
+      {
+        let errorPayload = null;
+        let textPreview = null;
+        try
+        {
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json"))
+          {
+            errorPayload = await res.json();
+          } else
+          {
+            const text = await res.text();
+            textPreview = text?.slice(0, 500);
+          }
+        } catch { }
+
+        // Helpful message for HTML (often causes "Unexpected token '<'")
+        const htmlHint =
+          textPreview && textPreview.trim().startsWith("<")
+            ? " (Server returned HTML; check the API base URL / route.)"
+            : "";
+
+        const err = new Error(
+          (errorPayload && (errorPayload.error || errorPayload.message)) ||
+          `HTTP error: ${res.status} ${res.statusText}${htmlHint}`
+        );
+        err.response = res;
+        err.data = errorPayload ?? { preview: textPreview };
+        throw err;
+      }
+
+      // 204 No Content
+      if (res.status === 204) return null;
+
+      // Content negotiation
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json"))
+      {
+        // Guard against invalid JSON throwing Unexpected token '<'
+        try
+        {
+          return await res.json();
+        } catch (e)
+        {
+          const text = await res.text().catch(() => "");
+          const htmlHint = text?.trim().startsWith("<")
+            ? "Server responded with HTML instead of JSON. Check that the API endpoint is correct."
+            : "Response could not be parsed as JSON.";
+          const err = new Error(`Bad JSON response. ${htmlHint}`);
+          err.cause = e;
+          err.preview = text.slice(0, 500);
+          throw err;
+        }
+      }
+      if (contentType.includes("text/")) return await res.text();
+      return await res.blob();
+    } catch (error)
+    {
+      if (controller && error?.name === "AbortError")
+      {
+        const e = new Error("Request timed out");
+        e.cause = error;
+        throw e;
+      }
+      if (
+        error?.name === "TypeError" &&
+        /Failed to fetch/i.test(error.message)
+      )
+      {
+        const netErr = new Error(
+          "Network error: Could not connect to the server"
+        );
+        netErr.cause = error;
+        throw netErr;
+      }
+      throw error;
+    } finally
+    {
+      if (timer) clearTimeout(timer);
+    }
+  },
+
+  /* ------------------------------- Health -------------------------------- */
+  testConnection()
+  {
+    return this.request("/health");
+  },
+
+  /* -------------------------------- Auth --------------------------------- */
+  async login(credentials)
+  {
+    const data = await this.request("/usermanagement/login", {
+      method: "POST",
+      body: credentials,
+    });
+    if (data?.token) authStore.setAuth(data);
+    return data;
+  },
+  logout()
+  {
+    authStore.clear();
+    this.setAuthToken(null);
+  },
+  me()
+  {
+    return authStore.currentUser();
+  },
+
+  /* ------------------------------ Products ------------------------------- */
+  listProducts(query = {})
+  {
+    return this.request(`/products${qs(query)}`);
+  },
+  getProduct(id)
+  {
+    return this.request(`/products/${id}`);
+  },
+  createProduct(payload)
+  {
+    return this.request("/products", { method: "POST", body: payload });
+  },
+  updateProduct(id, payload)
+  {
+    return this.request(`/products/${id}`, { method: "PUT", body: payload });
+  },
+  deleteProduct(id)
+  {
+    return this.request(`/products/${id}`, { method: "DELETE" });
+  },
+  listProductCategories()
+  {
+    return this.request(`/products/categories`);
+  },
+
+  /* ------------------------------ Employees ---------------------------- */
+  listEmployees(query = {})
+  {
+    return this.request(`/employees${qs(query)}`);
+  },
+  getEmployees(query = {})
+  {
+
+    // <— alias for older code
+
+    return this.listEmployees(query);
+  },
+  getEmployee(id)
+  {
+    return this.request(`/employees/${id}`);
+  },
+  createEmployee(payload)
+  {
+    return this.request("/employees", { method: "POST", body: payload });
+  },
+  updateEmployee(id, payload)
+  {
+    return this.request(`/employees/${id}`, { method: "PUT", body: payload });
+  },
+  deleteEmployee(id)
+  {
+    return this.request(`/employees/${id}`, { method: "DELETE" });
+  },
+  updateEmployeePayout(id, payout)
+  {
+    return this.request(`/employees/${id}/payout`, {
+      method: "PUT",
+      body: payout,
+    });
+  },
+  uploadEmployeeAvatar(id, file)
+  {
+    const fd = new FormData();
+    fd.append("avatar", file);
+    return this.request(`/employees/${id}/avatar`, {
+      method: "POST",
+      body: fd,
+    });
+  },
+  sendEmployeeOtp(id, phone)
+  {
+    return this.request(`/employees/${id}/otp/send`, {
+      method: "POST",
+      body: { phone },
+    });
+  },
+  verifyEmployeeOtp(id, code)
+  {
+    return this.request(`/employees/${id}/otp/verify`, {
+      method: "POST",
+      body: { code },
+    });
+  },
+  getEmployeeStats()
+  {
+    return this.request("/employees/stats");
+  },
+
+
+  /* ------------------------------ Attendance --------------------------- */
+
+  // OTP helpers used by your OtpModal
+  sendEmployeeOtp(id, phone)
+  {
+    return this.request(`/employees/${id}/otp/send`, {
+      method: "POST",
+      body: { phone },
+    });
+  },
+  verifyEmployeeOtp(id, code)
+  {
+    return this.request(`/employees/${id}/otp/verify`, {
+      method: "POST",
+      body: { code },
+    });
+  },
+
+  /* ------------------------------ Attendance ----------------------------- */
+
+  listAttendance(query = {})
+  {
+    return this.request(`/attendance${qs(query)}`);
+  },
+  getAttendance(id)
+  {
+    return this.request(`/attendance/${id}`);
+  },
+  markAttendance(payload)
+  {
+    return this.request("/attendance", { method: "POST", body: payload });
+  },
+  updateAttendance(id, payload)
+  {
+    return this.request(`/attendance/${id}`, { method: "PUT", body: payload });
+  },
+  deleteAttendance(id)
+  {
+    return this.request(`/attendance/${id}`, { method: "DELETE" });
+  },
+
+  /* ------------------------------- Payments ------------------------------ */
+  listPayments(query = {})
+  {
+    return this.request(`/payments${qs(query)}`);
+  },
+  getPayment(id)
+  {
+    return this.request(`/payments/${id}`);
+  },
+  createPayment(payload)
+  {
+    return this.request(`/payments`, { method: "POST", body: payload });
+  },
+  deletePayment(id)
+  {
+    return this.request(`/payments/${id}`, { method: "DELETE" });
+  },
+
+  /* -------------------------------- Users -------------------------------- */
+  getUsers(query = {})
+  {
+    return this.request(`usermanagement/all${qs(query)}`);
+  },
+  getUser(id)
+  {
+    return this.request(`usermanagement/${id}`);
+  },
+  createUser(payload)
+  {
+    return this.request("usermanagement/register", { method: "POST", body: payload });
+  },
+  updateUser(id, payload)
+  {
+    return this.request(`usermanagement/${id}`, { method: "PUT", body: payload });
+  },
+  deleteUser(id)
+  {
+    return this.request(`usermanagement/${id}`, { method: "DELETE" });
+  },
+
+  registerUser(payload)
+  {
+    return this.request(`/usermanagement/register`, { method: "POST", body: payload });
+  },
+
+  /* -------------------------------- Salaries ----------------------------- */
+  listSalaryRecords(query = {})
+  {
+    return this.request(`/salaries${qs(query)}`);
+  },
+  createSalaryRecord(payload)
+  {
+    return this.request(`/salaries`, { method: "POST", body: payload });
+  },
+
+  /* ----------------------------- Orders (Delivery) ----------------------- */
+  listOrders(query = {})
+  {
+    return this.request(`/delivery/orders${qs(query)}`);
+  },
+  createOrder(body)
+  {
+    return this.request("/order/create", { method: "POST", body });
+  },
+  updateOrderStatus(orderId, status)
+  {
+    return this.request(`/delivery/orders/${orderId}/status`, {
+      method: "PATCH",
+      body: { status },
+    });
+  },
+  deleteOrder(orderId)
+  {
+    return this.request(`/delivery/orders/${orderId}`, { method: "DELETE" });
+  },
+
+  /* ----------------------------- Custom Orders --------------------------- */
+  createCustomOrder(payload)
+  {
+    const hasFile =
+      typeof File !== "undefined" && payload?.designImage instanceof File;
+    if (hasFile)
+    {
+      const fd = new FormData();
+      Object.entries(payload).forEach(([k, v]) =>
+      {
+        if (v === undefined || v === null) return;
+        if (k === "designImage") fd.append("designImage", v);
+        else fd.append(k, v);
+      });
+      return this.request("/custom-orders", { method: "POST", body: fd });
+    }
+    return this.request("/custom-orders", { method: "POST", body: payload });
+  },
+  listCustomOrders(query = {})
+  {
+    return this.request(`/custom-orders${qs(query)}`);
+  },
+  getCustomOrdersStats()
+  {
+    return this.request("/custom-orders/dashboard/stats");
+  },
+  updateCustomOrderStatus(orderId, status)
+  {
+    return this.request(`/custom-orders/status/${orderId}`, {
+      method: "PATCH",
+      body: { status },
+    });
+  },
+  cancelCustomOrder(orderId)
+  {
+    return this.request(`/custom-orders/cancel/${orderId}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+/* ---------------------------- Review and complain ----------------------------- */
+export const ReviewsAPI = {
+  list: (query = {}) => apiService.request(`/reviews${qs(query)}`),
+  get: (id) => apiService.request(`/reviews/${id}`),
+  create: (payload) =>
+    apiService.request(`/reviews`, { method: "POST", body: payload }),
+  update: (id, payload) =>
+    apiService.request(`/reviews/${id}`, { method: "PATCH", body: payload }),
+  updateStatus: (id, status) =>
+    apiService.request(`/reviews/${id}/status`, {
+      method: "PATCH",
+      body: { status },
+    }),
+  remove: (id) => apiService.request(`/reviews/${id}`, { method: "DELETE" }),
+};
+
+export const ComplaintsAPI = {
+  list: (query = {}) => apiService.request(`/complaints${qs(query)}`),
+  get: (id) => apiService.request(`/complaints/${id}`),
+  create: (payload) =>
+    apiService.request(`/complaints`, { method: "POST", body: payload }),
+  update: (id, payload) =>
+    apiService.request(`/complaints/${id}`, { method: "PUT", body: payload }),
+  updateStatus: (id, status) =>
+    apiService.request(`/complaints/${id}/status`, {
+      method: "PATCH",
+      body: { status },
+    }),
+  addReply: (id, message, by) =>
+    apiService.request(`/complaints/${id}/replies`, {
+      method: "POST",
+      body: { message, by },
+    }),
+  remove: (id) => apiService.request(`/complaints/${id}`, { method: "DELETE" }),
+  /*update admin type*/
+  updateAdminType: (id, adminType) =>
+    apiService.request(`/complaints/${id}/admin`, {
+      method: "PATCH",
+      body: { adminType },
+    }),
+
+  addReply: (id, message, by) =>
+    apiService.request(`/complaints/${id}/replies`, {
+      method: "POST",
+      body: { message, by },
+    }),
+};
+
+export const userMgmtAPI = {
+  login: (email, password) => apiService.login({ email, password }),
+  list: (q) => apiService.getUsers(q),
+  get: (id) => apiService.getUser(id),
+  create: (payload) => apiService.createUser(payload),
+  update: (id, payload) => apiService.updateUser(id, payload),
+  remove: (id) => apiService.deleteUser(id),
+};
+
+export default apiService;
