@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://localhost:8000/admins";
+import { API_BASE_URL as API_ROOT } from "./api";
+
+const API_BASE_URL = `${API_ROOT}/admins`;
 
 export const adminService = {
   // Get all admins

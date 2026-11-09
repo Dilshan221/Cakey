@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node local.js",
+    "dev": "nodemon local.js",
+    "test": "node --test"
   },
   "author": "code with dun",
   "license": "ISC",

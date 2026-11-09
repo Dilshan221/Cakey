@@ -122,6 +122,19 @@ const list = async (_req, res) => {
   }
 };
 
+const get = async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    return res.json(employee);
+  } catch (error) {
+    if (error?.name === "CastError") {
+      return res.status(400).json({ message: "Invalid employee ID" });
+    }
+    return res.status(500).json({ message: "Unable to fetch employee" });
+  }
+};
+
 /* ============================== UPDATE ============================== */
 const update = async (req, res) => {
   try {
@@ -277,6 +290,7 @@ const verifyOtp = async (req, res) => {
 export default {
   create,
   list,
+  get,
   update,
   remove,
   sendOtp,

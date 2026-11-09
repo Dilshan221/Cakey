@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { API_BASE_URL as API_ROOT } from "../../services/api";
 
 const Dashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -12,7 +13,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   // Base URL for your backend API
-  const API_BASE_URL = "http://localhost:5000/api/dashboard"; // Updated to match backend routes
+  const API_BASE_URL = `${API_ROOT}/delivery/dashboard`;
 
   // Fetch all orders from backend
   const fetchOrders = async () => {
@@ -24,12 +25,12 @@ const Dashboard = () => {
       if (response.ok) {
         // Transform backend data to match frontend format
         const transformedOrders = data.orders.map((order) => ({
-          id: order.orderId,
-          customer: order.customer.name,
-          item: order.item.name,
-          price: order.payment.total,
+          id: order.id,
+          customer: order.customer,
+          item: order.item,
+          price: order.price,
           status: order.status,
-          _id: order._id, // Keep MongoDB ID for backend operations
+          _id: order.id, // Keep MongoDB ID for backend operations
         }));
         setOrders(transformedOrders);
       } else {
@@ -51,7 +52,7 @@ const Dashboard = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setStats(data.stats.orders);
+        setStats({ ...data.stats, total: data.stats.totalOrders });
       } else {
         console.error("Failed to fetch stats:", data.message);
       }
@@ -97,10 +98,10 @@ const Dashboard = () => {
   const cancelOrder = async (index) => {
     const order = orders[index];
 
-    if (window.confirm(`Are you sure you want to cancel and delete ${order.id}?\n\nThis will permanently remove the order from the database.`)) {
+    if (window.confirm(`Are you sure you want to cancel ${order.id}?`)) {
       try {
         const response = await fetch(`${API_BASE_URL}/orders/${order._id}/cancel`, {
-          method: "DELETE",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
@@ -109,14 +110,15 @@ const Dashboard = () => {
         const data = await response.json();
 
         if (response.ok) {
-          // Remove from local state since order is deleted
-          const updatedOrders = orders.filter((_, i) => i !== index);
+          const updatedOrders = orders.map((item, i) =>
+            i === index ? { ...item, status: "Cancelled" } : item
+          );
           setOrders(updatedOrders);
 
           // Refresh stats
           fetchStats();
 
-          alert(`✅ Order ${order.id} has been cancelled and permanently deleted from the database`);
+          alert(`Order ${order.id} has been cancelled`);
         } else {
           alert(`Failed to cancel order: ${data.message}`);
         }
@@ -138,6 +140,10 @@ const Dashboard = () => {
         // You can implement a proper invoice modal here
         // For now, just show alert with invoice data
         const invoice = data.invoice;
+        if (!invoice) {
+          alert(data.message || "Invoice details are not available yet");
+          return;
+        }
         alert(`Invoice for ${invoice.orderId}\n
 Customer: ${invoice.customer}\n
 Item: ${invoice.item}\n

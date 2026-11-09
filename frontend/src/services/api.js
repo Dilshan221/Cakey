@@ -1,15 +1,11 @@
 // src/services/api.js
 
 /* ---------------------------------- Env ---------------------------------- */
-const ENV =
-  (typeof import.meta !== "undefined" && import.meta.env) || process.env;
-
-export const API_BASE_URL =
+export const API_BASE_URL = (
   (typeof window !== "undefined" && window.__API_BASE__) ||
-  ENV?.VITE_API_BASE ||
-  ENV?.VITE_API_URL ||
-  ENV?.REACT_APP_API_URL ||
-  "http://localhost:8000/api";
+  process.env.REACT_APP_API_URL ||
+  "/api"
+).replace(/\/+$/, "");
 
 /* ------------------------------- Utilities ------------------------------- */
 const qs = (obj = {}) => {
@@ -221,10 +217,6 @@ export const apiService = {
     return this.request(`/employees${qs(query)}`);
   },
   getEmployees(query = {}) {
-<<<<<<< Updated upstream
-=======
-    // <— alias for older code
->>>>>>> Stashed changes
     return this.listEmployees(query);
   },
   getEmployee(id) {
@@ -269,25 +261,7 @@ export const apiService = {
     return this.request("/employees/stats");
   },
 
-<<<<<<< Updated upstream
   /* ------------------------------ Attendance --------------------------- */
-=======
-  // OTP helpers used by your OtpModal
-  sendEmployeeOtp(id, phone) {
-    return this.request(`/employees/${id}/otp/send`, {
-      method: "POST",
-      body: { phone },
-    });
-  },
-  verifyEmployeeOtp(id, code) {
-    return this.request(`/employees/${id}/otp/verify`, {
-      method: "POST",
-      body: { code },
-    });
-  },
-
-  /* ------------------------------ Attendance ----------------------------- */
->>>>>>> Stashed changes
   listAttendance(query = {}) {
     return this.request(`/attendance${qs(query)}`);
   },

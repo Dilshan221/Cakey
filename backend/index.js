@@ -1,11 +1,10 @@
 /// backend/index.js
 import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+import "dotenv/config";
 import cors from "cors";
 import morgan from "morgan";
 
-dotenv.config();
+import { connectDatabase } from "./utils/database.js";
 
 /* ---------------- Existing routes ---------------- */
 import attendanceRoute from "./routes/attendanceRoute.js";
@@ -15,11 +14,12 @@ import paymentRoute from "./routes/paymentRoute.js";
 import salaryRoute from "./routes/salaryRoute.js";
 import productRoute from "./routes/Productroutes.js";
 import orderRoute from "./routes/orderRoutes.js"; // core order flow (your existing)
-import reviewRoute from "./routes/reviewRoutes.js";
+import reviewRoute from "./routes/ReviewRoutes.js";
 import complaintRoute from "./routes/ComplaintRoutes.js";
+import adminRoute from "./routes/Adminroutes.js";
 
 /* ---------------- Delivery routes (ESM, default export) ---------------- */
-import normalOrderRoute from "./routes/delivery/orderRoutes.js"; // Normal delivery orders
+import normalOrderRoute from "./routes/delivery/OrderRoutes.js"; // Normal delivery orders
 import customOrderRoute from "./routes/delivery/customOrderRoutes.js"; // Custom/special orders
 import normalOrderDashRoute from "./routes/delivery/NormalOrderDashRoutes.js"; // KPIs/metrics
 
@@ -56,6 +56,22 @@ app.use(
 app.get("/", (_req, res) => res.json({ ok: true, service: "Cake&Bake API" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/test", (_req, res) =>
+  res.json({ message: "Backend connected successfully!" })
+);
+
+// Await one shared connection before running database-backed handlers.
+// Health endpoints remain available when the database is unavailable.
+app.use("/api", async (_req, res, next) => {
+  try {
+    await connectDatabase();
+    next();
+  } catch (_error) {
+    res.status(503).json({
+      error: "Database unavailable. Check the backend MONGO_URI and database network access.",
+    });
+  }
+});
 
 /* ---------------- API (existing) ---------------- */
 app.use("/api/attendance", attendanceRoute);
@@ -67,6 +83,7 @@ app.use("/api/products", productRoute);
 app.use("/api/order", orderRoute); // core order flow
 app.use("/api/reviews", reviewRoute);
 app.use("/api/complaints", complaintRoute);
+app.use("/api/admins", adminRoute);
 
 /* ---------------- API (delivery) ---------------- */
 // Primary mount
@@ -76,11 +93,6 @@ app.use("/api/orders", normalOrderRoute);
 
 app.use("/api/custom-orders", customOrderRoute);
 app.use("/api/delivery/dashboard", normalOrderDashRoute);
-
-/* ---------------- Test ---------------- */
-app.get("/api/test", (_req, res) =>
-  res.json({ message: "Backend connected successfully!" })
-);
 
 /* ---------------- 404 ---------------- */
 app.use((req, res) => {
@@ -106,60 +118,5 @@ app.use((err, _req, res, _next) => {
   }
   res.status(status).json(payload);
 });
-
-/* ---------------- Mongo + start ---------------- */
-const PORT = process.env.PORT || 8000;
-const MONGO_URI =
-  process.env.MONGO_URI || "mongodb://localhost:27017/cake_bake_dev";
-
-let server;
-
-const start = async () => {
-  try {
-    await mongoose.connect(MONGO_URI);
-    console.log("✓ Connected to MongoDB");
-
-    server = app.listen(PORT, () => {
-      console.log(`✓ Server running on http://localhost:${PORT}`);
-      console.log("Endpoints:");
-      console.log("- Health         GET  /api/health");
-      console.log("- Attendance     /api/attendance");
-      console.log("- Users Mgmt     /api/usermanagement");
-      console.log("- Employees      /api/employees");
-      console.log("- Payments       /api/payments");
-      console.log("- Salaries       /api/salaries");
-      console.log("- Products       /api/products");
-      console.log("- Orders (core)  /api/order");
-      console.log("- Reviews        /api/reviews");
-      console.log("- Complaints     /api/complaints");
-      console.log("- Delivery:");
-      console.log(
-        "   • Normal      /api/delivery/orders  (alias: /api/orders)"
-      );
-      console.log("   • Custom      /api/custom-orders");
-      console.log("   • Dashboard   /api/delivery/dashboard");
-    });
-  } catch (err) {
-    console.error("Startup error:", err);
-    process.exit(1);
-  }
-};
-start();
-
-/* ---------------- Graceful shutdown ---------------- */
-const shutdown = async (signal) => {
-  try {
-    console.log(`\n${signal} received: closing server...`);
-    if (server) await new Promise((r) => server.close(r));
-    await mongoose.connection.close();
-    console.log("Mongo connection closed.");
-    process.exit(0);
-  } catch (e) {
-    console.error("Error during shutdown:", e);
-    process.exit(1);
-  }
-};
-
-["SIGINT", "SIGTERM"].forEach((sig) => process.on(sig, () => shutdown(sig)));
 
 export default app;
